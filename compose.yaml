@@ -1,0 +1,50 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=8080
+    volumes:
+      - ./api:/app
+      - /app/tmp
+    working_dir: /app
+    command: go run cmd/server/main.go
+    develop:
+      watch:
+        - action: rebuild
+          path: ./api
+          ignore:
+            - ./api/tmp/
+    depends_on:
+      - ui
+    networks:
+      - route-dog
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    working_dir: /app
+    command: pnpm run dev --host 0.0.0.0 --port 3000
+    develop:
+      watch:
+        - action: sync
+          path: ./ui/src
+          target: /app/src
+        - action: rebuild
+          path: ./ui/package.json
+    networks:
+      - route-dog
+
+networks:
+  route-dog:
+    driver: bridge

@@ -55,10 +55,7 @@ func main() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origins := os.Getenv("CORS_ORIGINS")
-		if origins == "" {
-			origins = "http://localhost:3000,http://localhost:5173"
-		}
+		_ = os.Getenv("CORS_ORIGINS") // Read env var but don't use it for now
 
 		w.Header().Set("Access-Control-Allow-Origin", "*") // For development
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")

@@ -60,7 +60,11 @@ func TestParseAddresses_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -98,7 +102,11 @@ func TestParseAddresses_MissingImage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", resp.StatusCode)
@@ -125,7 +133,11 @@ func TestParseAddresses_InvalidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", resp.StatusCode)
@@ -135,7 +147,7 @@ func TestParseAddresses_InvalidJSON(t *testing.T) {
 // TestGeocodingService tests the geocoding functionality
 func TestGeocodingService(t *testing.T) {
 	geocodingService := service.NewGeocodingService()
-	
+
 	// Test with a known address
 	testAddress := "1600 Pennsylvania Ave NW, Washington, DC 20500"
 

@@ -12,14 +12,14 @@ import (
 
 // AddressHandler handles address-related HTTP requests
 type AddressHandler struct {
-	openaiService   *service.OpenAIService
+	openaiService    *service.OpenAIService
 	geocodingService *service.GeocodingService
 }
 
 // NewAddressHandler creates a new address handler
 func NewAddressHandler(openaiService *service.OpenAIService, geocodingService *service.GeocodingService) *AddressHandler {
 	return &AddressHandler{
-		openaiService:   openaiService,
+		openaiService:    openaiService,
 		geocodingService: geocodingService,
 	}
 }
@@ -67,7 +67,10 @@ func (h *AddressHandler) ParseAddresses(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // GeocodeAddress handles PUT /v1/geocode-address for single address geocoding
@@ -75,7 +78,7 @@ func (h *AddressHandler) GeocodeAddress(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		Address string `json:"address"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.respondWithError(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
@@ -98,18 +101,24 @@ func (h *AddressHandler) GeocodeAddress(w http.ResponseWriter, r *http.Request) 
 			Longitude:    0,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(geocoded)
+	if err := json.NewEncoder(w).Encode(geocoded); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *AddressHandler) respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(model.ParseAddressesResponse{
+	_ = json.NewEncoder(w).Encode(model.ParseAddressesResponse{
 		Error: message,
-	})
+	}) // Ignore encoding error in error handler
 }

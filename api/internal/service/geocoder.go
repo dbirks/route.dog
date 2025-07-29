@@ -27,7 +27,9 @@ func (s *GeocodingService) GeocodeAddress(address string) (model.Address, error)
 	if err != nil {
 		return model.Address{}, fmt.Errorf("geocoding request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore error on close
+	}()
 
 	var result model.GeocodeResult
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

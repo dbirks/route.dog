@@ -24,7 +24,7 @@ func NewOpenAIService() (*OpenAIService, error) {
 	}
 
 	client := openai.NewClient(option.WithAPIKey(apiKey))
-	return &OpenAIService{client: client}, nil
+	return &OpenAIService{client: &client}, nil
 }
 
 // ExtractAddressesFromImage uses OpenAI Vision to extract addresses from an image
@@ -38,14 +38,16 @@ func (s *OpenAIService) ExtractAddressesFromImage(imageBase64 string) ([]string,
 	}
 
 	response, err := s.client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-		Model: openai.F(openai.ChatModelGPT4o),
-		Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
-			openai.UserMessage(
-				openai.F("Extract all delivery addresses from this image. Return only a JSON array of address strings, no other text. Each address should be a complete street address including street number, street name, city, state/province, and postal code when visible. If no addresses are found, return an empty array."),
-				openai.ImagePart(openai.F(fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64))),
-			),
-		}),
-		MaxTokens: openai.F(int64(1000)),
+		Model: openai.ChatModelGPT4o,
+		Messages: []openai.ChatCompletionMessageParamUnion{
+			openai.UserMessage([]openai.ChatCompletionContentPartUnionParam{
+				openai.TextContentPart("Extract all delivery addresses from this image. Return only a JSON array of address strings, no other text. Each address should be a complete street address including street number, street name, city, state/province, and postal code when visible. If no addresses are found, return an empty array."),
+				openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
+					URL: fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64),
+				}),
+			}),
+		},
+		MaxTokens: openai.Int(1000),
 	})
 
 	if err != nil {
@@ -57,7 +59,7 @@ func (s *OpenAIService) ExtractAddressesFromImage(imageBase64 string) ([]string,
 	}
 
 	content := response.Choices[0].Message.Content
-	
+
 	// Parse the JSON array of addresses
 	var addresses []string
 	if err := json.Unmarshal([]byte(content), &addresses); err != nil {

@@ -1,0 +1,112 @@
+version: '3'
+
+vars:
+  API_DIR: api
+  UI_DIR: ui
+
+dotenv: ['.env']
+
+tasks:
+  dev:
+    desc: Start development servers for both API and UI
+    deps: [dev:api, dev:ui]
+
+  dev:api:
+    desc: Start Go API development server
+    dir: "{{.API_DIR}}"
+    cmds:
+      - go run cmd/server/main.go
+    
+  dev:ui:
+    desc: Start React UI development server
+    dir: "{{.UI_DIR}}"
+    cmds:
+      - pnpm run dev
+
+  install:
+    desc: Install dependencies for both API and UI
+    deps: [install:api, install:ui]
+
+  install:api:
+    desc: Install Go API dependencies
+    dir: "{{.API_DIR}}"
+    cmds:
+      - go mod tidy
+
+  install:ui:
+    desc: Install UI dependencies
+    dir: "{{.UI_DIR}}"
+    cmds:
+      - pnpm install
+
+  build:
+    desc: Build both API and UI for production
+    deps: [build:api, build:ui]
+
+  build:api:
+    desc: Build Go API binary
+    dir: "{{.API_DIR}}"
+    cmds:
+      - go build -o server cmd/server/main.go
+
+  build:ui:
+    desc: Build React UI for production
+    dir: "{{.UI_DIR}}"
+    cmds:
+      - pnpm run build
+
+  test:
+    desc: Run tests for both API and UI
+    deps: [test:api, test:ui]
+
+  test:api:
+    desc: Run Go API tests
+    dir: "{{.API_DIR}}"
+    cmds:
+      - go test -v ./test/...
+
+  test:api:hurl:
+    desc: Run Hurl API tests (requires running server)
+    dir: "{{.API_DIR}}"
+    cmds:
+      - hurl --variables-file test/environments/local.env --test test/addresses.hurl
+
+  test:ui:
+    desc: Run UI type checking and linting
+    dir: "{{.UI_DIR}}"
+    cmds:
+      - pnpm run type-check
+      - pnpm run lint
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f {{.API_DIR}}/server
+      - rm -rf {{.UI_DIR}}/dist
+      - rm -rf {{.UI_DIR}}/node_modules/.cache
+
+  setup:
+    desc: Initial project setup - copy env files and install dependencies
+    cmds:
+      - cp {{.API_DIR}}/.env.example {{.API_DIR}}/.env || echo ".env already exists"
+      - task: install
+    
+  docker:build:
+    desc: Build Docker images
+    cmds:
+      - docker compose build
+
+  docker:up:
+    desc: Start Docker containers
+    cmds:
+      - docker compose up -d
+
+  docker:down:
+    desc: Stop Docker containers
+    cmds:
+      - docker compose down
+
+  docker:logs:
+    desc: View Docker container logs
+    cmds:
+      - docker compose logs -f

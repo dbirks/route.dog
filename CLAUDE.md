@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Route.dog is a full-stack address mapping application that extracts delivery addresses from images using OpenAI Vision and geocodes them using the US Census API. The current implementation focuses on the Go API backend (located in `/api/`), with a planned React frontend using Vite, TypeScript, Tailwind CSS 4.0, Shadcn/UI, Zustand, and MapLibre GL.
+Route.dog is a full-stack address mapping application that extracts delivery addresses from images using OpenAI Vision and geocodes them using the US Census API. The project consists of a Go API backend (`/api/`) and a React frontend (`/ui/`) that work together to provide an interactive mapping experience.
 
 ## Core Architecture
 
@@ -18,20 +18,30 @@ The API follows clean architecture principles with clear separation of concerns:
 - **test/** - Integration tests using both Go httptest and Hurl
 
 ### Key Data Flow
-1. POST /v1/addresses receives base64 image data
+1. Frontend uploads image via POST /v1/addresses with base64 data
 2. OpenAI Vision extracts address strings from the image
 3. US Census Geocoding API validates/standardizes addresses and provides coordinates
 4. Response includes original, standardized addresses with lat/lng coordinates
 5. Failed geocoding attempts still return the address with 0,0 coordinates
+6. Frontend displays addresses on interactive map with markers
+
+### Frontend (React UI)
+The React frontend follows modern best practices with clean component architecture:
+
+- **ui/src/components/** - React components (MapView, AddressListPanel, etc.)
+- **ui/src/store/** - Zustand state management
+- **ui/src/components/ui/** - Shadcn/UI component library
+- **ui/tailwind.config.js** - Tailwind CSS 4.0 configuration with dark mode
 
 ### Environment Configuration
-- Requires `OPENAI_API_KEY` environment variable
+- **Backend**: Requires `OPENAI_API_KEY` environment variable
+- **Frontend**: Node.js 20+ (specified in .nvmrc)
 - Uses US Census Geocoding API (no API key required)
 - CORS configured for frontend development (localhost:3000, localhost:5173)
 
 ## Development Commands
 
-### Setup
+### Backend Setup
 ```bash
 cd api
 cp .env.example .env
@@ -39,23 +49,44 @@ cp .env.example .env
 go mod tidy
 ```
 
-### Run Server
+### Frontend Setup
 ```bash
-go run cmd/server/main.go
+cd ui
+pnpm install
+```
+
+### Run Development Servers
+```bash
+# Terminal 1: Start Go API server
+cd api && go run cmd/server/main.go
+
+# Terminal 2: Start React dev server  
+cd ui && pnpm run dev
+```
+
+### Frontend Build
+```bash
+cd ui
+pnpm run build
+pnpm run preview  # Preview production build
 ```
 
 ### Testing Commands
 ```bash
-# Go integration tests (httptest)
+# Backend: Go integration tests (httptest)
+cd api
 go test -v ./test/...
 go test -v ./test/ -run TestParseAddresses_Success
 
-# Hurl API tests (requires server running)
+# Backend: Hurl API tests (requires server running)
+cd api
 hurl --variables-file test/environments/local.env --test test/addresses.hurl
 hurl --variable host=http://localhost:8080 --test test/addresses.hurl
 
-# Hurl with reports
-hurl --variables-file test/environments/local.env --test --report-html test-results test/addresses.hurl
+# Frontend: Type checking and linting
+cd ui
+pnpm run type-check  # TypeScript compilation check
+pnpm run lint        # ESLint
 ```
 
 ### Build
