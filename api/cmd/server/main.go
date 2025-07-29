@@ -46,6 +46,7 @@ func main() {
 	// Routes
 	r.Route("/v1", func(r chi.Router) {
 		r.Post("/addresses", addressHandler.ParseAddresses)
+		r.Put("/geocode-address", addressHandler.GeocodeAddress)
 	})
 
 	log.Printf("Server starting on port %s", port)
