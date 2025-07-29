@@ -1,0 +1,599 @@
+# Address Mapper Project Requirements Document
+
+## Project Overview
+
+**Address Mapper** is a full-stack web application for mapping and organizing delivery routes. Users can input a list of addresses (potentially parsed from unstructured text via an AI), visualize these locations on an interactive map, edit addresses if needed, and save or recall past routes. The application will display a full-screen map with minimal UI chrome, supporting both light and dark modes. It consists of a React frontend (using Vite, TypeScript, Tailwind CSS 4.0, Shadcn/UI components, Zustand state management, and MapLibre GL for maps) and a Go backend (for address parsing/geocoding, route data management, and generating map thumbnails).
+
+**Key Features:**
+
+* **Address Input & Parsing:** Accept raw address input (possibly multi-line text). The backend can use OpenAI API to parse unstructured text into individual addresses, if needed, then validate and geocode each address.
+* **Address Standardization & Geocoding:** Convert each address into a standardized format (e.g. USPS format) and retrieve latitude/longitude coordinates. We favor official data sources (e.g. USPS or the U.S. Census geocoder) to match the format used by delivery companies. The USPS Address Validation API returns addresses in USPS-standard format[[1]](https://www.smarty.com/articles/usps-api#:~:text=USPS%E2%80%99s%20address%20validation%20tool%20is,accepted%20USPS%20standardized%20address%20format), and the U.S. Census Geocoding API can provide a latitude/longitude for an input address[[2]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=Geocoding%20is%20the%20process%20of,it%20is%20possible%20to%20geocode)[[3]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=This%20service%20is%20designed%20for,from%20a%20MAF%2FTIGER%20benchmark%20database).
+* **Interactive Map Display:** Plot all geocoded addresses on a full-screen interactive map (MapLibre GL) without requiring proprietary map services. MapLibre GL JS is an open-source WebGL map library (forked from Mapbox GL) that allows using open map tiles with no API keys or fees. We will use an open vector map style (such as MapLibre’s demo tiles) so no token is needed[[4]](https://github.com/maplibre/demotiles#:~:text=It%20demonstrates%20the%20usage%20of,the%20MapLibre%20World%20map%20style)[[5]](https://maplibre.org/maplibre-gl-js/docs/examples/display-a-map/#:~:text=const%20map%20%3D%20new%20maplibregl.Map%28,script). The map will show markers for each address and optionally a path connecting them in order.
+* **Address List & Editing:** Display the list of input addresses (and their standardized forms) alongside the map. Each address entry will have an **Edit** option. Editing an address opens an inline text field or modal where the user can correct the address. On save, the frontend calls a backend endpoint to re-validate/geocode that single address, then updates the list and map marker.
+* **Past Routes Management:** Allow users to save a set of addresses as a “route” (or automatically save recent routes). Users can view a list of past routes and load one to view its addresses on the map again. The UI for past routes will be accessible via a button (e.g. a “history” icon or menu item). This will open a **Past Routes** view – implemented as an overlay panel (e.g. a modal dialog or a slide-out sheet) over the map – listing saved routes by date/name. Each saved route entry will include a thumbnail image of the route (small map snapshot) for easy recognition.
+* **Thumbnail Generation:** The Go backend will generate a static map image for each route (e.g. when a route is saved). This image acts as a thumbnail in the Past Routes list. We will generate it on the backend (as part of the same response that returns route data) so the frontend receives the image data (likely as a Base64-encoded PNG in the JSON payload) along with other route info. This avoids extra client requests. To accomplish this, we can use a library like **go-staticmaps** which renders map images using OpenStreetMap tiles, with markers and paths[[6]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=A%20go%20,map%20images%20using%20OpenStreetMap%20tiles). For example, go-staticmaps allows adding markers for coordinates and drawing paths, then rendering a PNG image[[7]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=func%20main%28%29%20,16.0%2C)[[8]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=ctx.AddObject%28%20sm.NewMarker%28%20s2.LatLngFromDegrees%2852.514536%2C%2013.350151%29%2C%20color.RGBA,16.0%2C%20%29%2C). The backend will create a thumbnail (e.g. a small 320x240 image) with markers at each stop (and maybe lines between them), encode it to Base64, and include it in the API response.
+* **Dark Mode Support:** The UI will support light and dark themes. By default it follows the system preference, with an option to toggle manually. We will implement a theme context provider on the frontend. This will apply a CSS class (dark or light) to the document root based on the current theme selection. Tailwind will be configured to use **class-based dark mode** (instead of media) so that we can toggle it programmatically. All UI components (including the map – MapLibre’s default tiles or style will need a dark variant if available) will adjust accordingly.
+
+## Technology Stack and Architecture
+
+**Frontend:**
+
+* **Vite + React + TypeScript:** The project will be bootstrapped with Vite for a fast, minimal build setup. We will create a new project using the Vite React template. (Use the command pnpm create vite@latest and select **React + TypeScript** when prompted[[9]](https://ui.shadcn.com/docs/installation/vite#:~:text=Start%20by%20creating%20a%20new,the%20React%20%2B%20TypeScript%20template). We should choose the SWC variant if offered, for faster compilation.)
+* **PNPM:** We use pnpm as the package manager for efficient, consistent dependency management. All installation instructions will use pnpm.
+* **Tailwind CSS 4.0:** Tailwind will be our CSS framework for rapid UI styling. We’ll use the **official Vite plugin for Tailwind** introduced in Tailwind v4. This new integration simplifies setup by configuring Tailwind via the Vite config instead of a separate PostCSS pipeline[[10]](https://dev.to/goldenekpendu/how-to-install-tailwind-v4-in-a-vite-project-g3d#:~:text=Since%20Tailwind%20v4%2C%20the%20process,and%20below%20are%20the%20steps)[[11]](https://tailwindcss.com/docs/installation/using-vite#:~:text=Add%20the%20,your%20Vite%20configuration). After creating the Vite app, install Tailwind and its Vite plugin:
+* pnpm add tailwindcss @tailwindcss/vite
+* Next, configure Vite to use the plugin. In vite.config.ts, include Tailwind in the plugins array along with React:
+* import { defineConfig } from 'vite';
+  import react from '@vitejs/plugin-react';
+  import tailwindcss from '@tailwindcss/vite';
+
+  export default defineConfig({
+   plugins: [react(), tailwindcss()],
+   // ... (rest of config, e.g. alias)
+  });
+* [[11]](https://tailwindcss.com/docs/installation/using-vite#:~:text=Add%20the%20,your%20Vite%20configuration)This ensures Tailwind processes our CSS during development and build. We will also create a minimal Tailwind CSS entry file. Replace the content of src/index.css with:
+* @import "tailwindcss";
+* This single import includes Tailwind’s base, components, and utilities layers[[12]](https://ui.shadcn.com/docs/installation/vite#:~:text=Replace%20everything%20in%20,the%20following) (Tailwind v4 uses an @import to include all necessary styles). The app’s global styles (if any) can be added in this file below that line.
+* **Tailwind Configuration:** We will add a Tailwind config to enable class-mode dark theme and specify content files. Create a tailwind.config.cjs (or .js) in the project root with at least:
+* module.exports = {
+   darkMode: 'class',
+   content: ["./index.html", "./src/\*\*/\*.{tsx,jsx,js,ts}"],
+   theme: {
+   extend: {}
+   },
+   plugins: []
+  };
+* Setting darkMode: 'class' is crucial so that adding a .dark class on the <html> element will activate dark theme styles (rather than relying on OS media query). The content paths ensure Tailwind scans our HTML/React files for class names to include in the CSS bundle (this may be somewhat automatic with the Vite plugin, but we explicitly set it for completeness). If we use any Tailwind plugins (e.g. forms or typography), we would include them in the config; for now, none are required.
+* **Shadcn/UI Components:** For UI components, we will use **shadcn/ui**, which provides pre-built accessible components styled with Tailwind. Shadcn components will let us avoid building common UI elements from scratch while keeping bundle size minimal (components are copied into our project, not imported from a large library). We will integrate Shadcn for Vite/React as follows:
+* **Initialize Shadcn:** Install the Shadcn CLI and run the init script.
+* pnpm dlx shadcn@latest init
+* This will set up the shadcn-ui configuration (components.json file) in our project, prompting for a base color, etc. We can select "Neutral" for the base color when asked[[13]](https://ui.shadcn.com/docs/installation/vite#:~:text=You%20will%20be%20asked%20a,components.json) (this defines the default theme colors for components).
+* **Add Components:** Use the Shadcn CLI to add specific UI components we need. For example, to add a Button component:
+* pnpm dlx shadcn@latest add button
+* [[14]](https://ui.shadcn.com/docs/installation/vite#:~:text=You%20can%20now%20start%20adding,components%20to%20your%20project)This command will fetch the source for Shadcn’s Button and related styles and place them in our project’s components/ui/ directory. We will similarly add any other components required:
+  + **Input** (for text fields, used in address editing forms).
+  + **Dialog** (for modal dialogs, e.g. confirm or edit dialogs).
+  + **Sheet** (for a slide-over panel, which we can use for the Past Routes panel – Shadcn’s Sheet component creates a drawer from a screen edge).
+  + **Tabs** (optional, but since we decided not to use URL routing for tab navigation, we might manage view switches manually. If needed, Shadcn’s Tabs could organize content sections).
+  + **Switch or Toggle** (for theme toggle if we prefer a styled switch, though we can also use a plain icon button).
+  + **Label** (to label form fields in dialogs).
+  + **Table** or **Card** (optional, for presenting the address list or past route items with a nicer layout). We should only add what we need to keep the bundle lean. Each shadcn add command will import the component code and any Radix UI dependencies it uses. For example, adding dialog will also bring in Radix Dialog primitives.
+* **Install Peer Dependencies:** Some Shadcn components might require peer libs (e.g. Radix or Lucide icons). The CLI should prompt or install Radix packages automatically. We should also install **lucide-react** for icon components (Shadcn uses Lucide for icons like the sun/moon icons for dark mode toggle).
+* pnpm add lucide-react
+* We will use <Sun /> and <Moon /> icons from Lucide for the theme toggle button.
+* **Adjust tsconfig for Path Aliases:** Shadcn’s default setup suggests using the @/ path alias for imports (as seen in the example import { Button } from "@/components/ui/button"[[15]](https://ui.shadcn.com/docs/installation/vite#:~:text=The%20command%20above%20will%20add,then%20import%20it%20like%20this)). We can enable this for convenience. In the Vite project, TypeScript is split between tsconfig.json and tsconfig.app.json. We will edit both to add:
+* "compilerOptions": {
+   "baseUrl": ".",
+   "paths": {
+   "@/\*": ["./src/\*"]
+   }
+  }
+* in their compilerOptions[[16]](https://ui.shadcn.com/docs/installation/vite#:~:text=,%7D)[[17]](https://ui.shadcn.com/docs/installation/vite#:~:text=,%5D). Also add an alias in vite.config.ts for @ pointing to ./src using Node’s path module[[18]](https://ui.shadcn.com/docs/installation/vite#:~:text=%2F%2F%20https%3A%2F%2Fvite.dev%2Fconfig%2F%20export%20default%20defineConfig%28,%7D%2C%20%7D%2C). For example:
+* import path from "path";
+  export default defineConfig({
+   // ...
+   resolve: {
+   alias: {
+   "@": path.resolve(\_\_dirname, "./src")
+   }
+   }
+  });
+* This is optional but makes imports cleaner. After this, our components can be referenced with @/components/... paths.
+* **State Management (Zustand):** We will use **Zustand** for client state management. Zustand is a very lightweight (~1.1 KB) but powerful state management library[[19]](https://dev.to/djibrilm/react-state-management-with-zustand-5hl9#:~:text=Small%20size%20bundle%3A%20%20with,yet%20one%20of%20the%20performers), which aligns with our goal of minimal bundle overhead. It provides a simple hook-based store without the boilerplate of Redux. We will create a Zustand store to hold application state such as:
+* The list of addresses (each with its data: input text, standardized address, coordinates, etc.).
+* The current route or session (maybe an ID or name).
+* UI state, e.g. whether the Past Routes panel or an Edit dialog is open, and any data needed for those (like which address is being edited).
+* Theme selection (though we might handle theme via context as per Shadcn’s recommended approach, Zustand could also store a theme flag if desired).
+
+**Why Zustand:** It’s minimal and simple (only ~1.16 kB gzipped) yet optimized (allows selective component subscriptions to avoid re-renders)[[19]](https://dev.to/djibrilm/react-state-management-with-zustand-5hl9#:~:text=Small%20size%20bundle%3A%20%20with,yet%20one%20of%20the%20performers). This fits our need for a global store (for addresses and UI flags) without adding much bundle size or complexity. We will define a store (e.g. useRouteStore) that includes the addresses array and actions like setAddresses, updateAddress(index, newData), addRoute(route) for saving a past route, etc. Components can then use this store via hooks (e.g. const addresses = useRouteStore(state => state.addresses)). - **Map Library (MapLibre GL JS):** For the interactive map, we use **MapLibre GL JS** (an open-source fork of Mapbox GL JS). MapLibre allows us to display interactive vector maps without a Mapbox token. We will install the maplibre-gl package:
+
+pnpm add maplibre-gl
+
+We also include MapLibre’s CSS in our app (so the map controls and attributions are styled properly). Import the CSS in our main CSS or index file:
+
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+[[20]](https://docs.stadiamaps.com/tutorials/getting-started-with-maplibre-react-components/#:~:text=Before%20adding%20the%20map%20to,gl%60%20package). We’ll create a React component (e.g. <MapView />) to encapsulate the map. In that component: - Render a container <div id="map" className="w-full h-full"> (ensuring its parent containers have full height). - In a React useEffect, initialize the map:
+
+import maplibregl from 'maplibre-gl';
+...
+useEffect(() => {
+ const map = new maplibregl.Map({
+ container: 'map', // ID of the div
+ style: 'https://demotiles.maplibre.org/style.json', // open style URL with no key
+ center: [0, 0],
+ zoom: 1
+ });
+ // Optionally add controls, etc.
+ return () => map.remove(); // cleanup on component unmount
+}, []);
+
+This uses MapLibre’s demo style/tiles (a basic world basemap)[[5]](https://maplibre.org/maplibre-gl-js/docs/examples/display-a-map/#:~:text=const%20map%20%3D%20new%20maplibregl.Map%28,script). Using demotiles.maplibre.org means no API key is required, aligning with our open-source approach. (We can later switch to a more detailed style or self-hosted tiles if needed for finer zoom levels; the demo style is simple and mainly for low-zoom. Alternatively, we could use a MapTiler or Stadia Maps style with a free API key if we need detailed streets.) - Plot markers: We can use MapLibre’s Marker API to add markers for each address coordinate. For each address in state, create a new maplibregl.Marker() with an optional custom color or icon, and set its LngLat to the address’s coordinates, then add to map. If the addresses change (edited or new route loaded), we should update markers. We might handle this by either rebuilding markers whenever the address list updates or by controlling markers via React if using a wrapper library. Simpler: on each update, clear existing markers layer and re-add. Given potentially small number of points (typical routes), performance is fine. - Draw route line (optional): If the order of addresses matters (like a route path), we can use MapLibre’s Polyline via GeoJSON source or use the directions API. However, computing actual driving route lines is complex (requires routing engine). For now, we might draw a simple polyline connecting the points in input order (not actual road path, just straight lines between points). This can be done by adding a GeoJSON LineString to the map. (Alternatively, we skip lines and just show points unless a proper directions API is integrated in future.)
+
+The map will occupy the full screen behind any overlays (like the address list or modals). We will ensure the map’s container is sized via CSS to fill the viewport (e.g. HTML, body, #root 100%, and the map div 100% of its parent).
+
+**Backend:**
+
+* **Language:** Go (Golang) for the server, chosen for its performance and suitability in building fast HTTP APIs.
+* **API Design:** The backend will expose a few RESTful endpoints (JSON in/out):
+* **POST /api/parse-and-geocode** – Accepts raw input (possibly a text blob or list of address strings). The server will:
+  + If needed, call OpenAI API to parse the text into individual address strings (for example, if the input is an unformatted note or multiline text). This would use an OpenAI model (like GPT-4) prompt to extract structured addresses. *This step can be skipped if the frontend already separates addresses or if user inputs addresses one by one.*
+  + For each address string, use an address validation/geocoding service. We favor using the **U.S. Census Geocoder API** for U.S. addresses as it provides both validation (standardization) and coordinates for free[[2]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=Geocoding%20is%20the%20process%20of,it%20is%20possible%20to%20geocode)[[3]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=This%20service%20is%20designed%20for,from%20a%20MAF%2FTIGER%20benchmark%20database). We send each address (or use their batch endpoint if efficiency needed) and get back standardized address components and lat/long. If an address is international or if we wanted, we could fall back to a service like OpenStreetMap Nominatim or Google Geocoding API (though Google would require an API key and has usage costs).
+  + The USPS API can standardize addresses to USPS format (ensuring things like “Street” -> “ST”, adding ZIP+4, etc.)[[21]](https://www.smarty.com/articles/usps-api#:~:text=Image%3A%20USPS%20API%20example%20,output%20of%20validated%20address), but it does not provide coordinates. The Census Geocoder, however, uses TIGER/Line data and will return coordinates along with a matched address which is usually in USPS standard form or close to it (including ZIP+4 if found). So using the Census service alone may suffice for both needs.
+  + Compile the results into a JSON response containing an array of addresses, each with fields like: originalInput, standardizedAddress (string or structured parts), latitude, longitude, and perhaps a geocodeConfidence if provided by the service.
+  + Also, generate a route ID (e.g., a UUID or timestamp) and if this is considered a “current route,” store it in memory or database.
+  + Generate a thumbnail image for this set of addresses: call the static map generation function (using go-staticmaps). Plot the coordinates on a static image (with markers and connecting lines). Return this image as a Base64 string (e.g., thumbnailPNG field).
+* **PUT /api/geocode-address** – Geocode a single address. This will be used when an address is edited by the user. The request contains the address text and maybe an ID of the route or index of the address. The server validates/geocodes this one address (using the same method as above), and returns the updated standardized form and coordinates. (Alternatively, we could reuse the parse-and-geocode endpoint for single addresses, but a separate endpoint clarifies intent and avoids reprocessing the whole list.)
+* **GET /api/routes** – List saved past routes. The server will return a list of route summaries. Each summary could include: route ID, timestamp, maybe a custom name, and the thumbnail image (Base64 or a URL to an image). It might also include a short description (like number of stops and maybe main area or first/last address).
+* **GET /api/routes/{id}** – Retrieve a specific past route’s details. Returns the full list of addresses (with coords and formatted text) for that route, plus the thumbnail (if not already sent in list) and possibly any other stored info (distance, etc., if we compute that later).
+* **POST /api/routes/{id}/save** – (Optional if we want an explicit save action; otherwise, the initial parse endpoint could auto-save). This would save the current route (addresses in state) to a database or file. Could accept a name for the route.
+* **Data Storage:** Initially, to simplify, we might store past routes in memory (a simple slice or map in the Go server) for the session. But for persistence, integrating a lightweight database or file storage is preferable. Options:
+* Use an embedded database like SQLite (via Go's database/sql or an ORM) to store routes.
+* Or store to JSON files on disk. For example, each saved route could be a JSON file or one file containing all routes.
+* Since this is an MVP, an in-memory store might be acceptable, but note that will reset on server restart. We’ll likely choose SQLite for real persistence.
+* **Address Geocoding Implementation:** We'll implement a Go service layer that calls the chosen geocoding API. For the Census Geocoder, it’s a simple HTTP GET request we can construct (e.g. https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=...&benchmark=Public\_AR\_Current&format=json). The response contains coordinate results which we’ll parse. Alternatively, for USPS API, we’d use their XML-based SOAP-ish request (requires a USPS Web Tools user ID). Using USPS API would return a standardized address (we’d then need another API for coordinates, so likely not worth it alone).
+  In summary, we’ll likely do: **Census geocode -> get standardized address + lat/long**. If an address fails to geocode, we return an error or flag to the client so the UI can indicate that (and the user might correct it).
+* **OpenAI Integration:** If using OpenAI for address parsing, the backend (Go) would call the OpenAI API (e.g. via their Go SDK or HTTP) with the raw input text and a prompt to extract addresses. For example, prompt: *"Extract all mailing addresses from the following text in JSON array format."* Once addresses are extracted by the AI, the normal geocoding flow runs. This step is asynchronous by nature, but we will perform it within the request to /parse-and-geocode for simplicity. (Ensure to set a reasonable timeout and handle errors from the AI API.)
+* **Parallelization:** The user hinted at possibly running the thumbnail generation in parallel with OpenAI calls to optimize response time. For now, the plan is to handle them sequentially in the single request (first parse addresses, then geocode and generate image) to avoid complexity. However, Go can easily spawn a goroutine to generate the image while geocoding is happening, and then combine results. We can consider this if needed for performance. Initially, since the number of addresses per route is not huge, sequential processing should be fast enough (especially if using the batch geocoding endpoint for multiple addresses).
+* **Response Format:** The JSON response from parse-and-geocode (or on loading a saved route) will contain all necessary data for the frontend to render the route without additional calls. For example:
+* {
+   "routeId": "abc123",
+   "addresses": [
+   {
+   "original": "123 Main st, Springfield, IL",
+   "standardized": "123 MAIN ST, SPRINGFIELD IL 62704-5602",
+   "latitude": 39.781721,
+   "longitude": -89.650148
+   },
+   ...
+   ],
+   "thumbnailPNG": "data:image/png;base64,iVBORw0KG...etc"
+  }
+* The thumbnailPNG is a data URI or raw Base64 that the frontend can directly use in an <img> tag to display the route overview. By including it in the same response, the UI can render everything at once. (The UI should only embed this image in the Past Routes list or route header; the main interactive map uses the coordinates instead.)
+
+## Frontend Application Structure
+
+The frontend will be a single-page React application. Given the requirements, we will have the following high-level components and UI structure:
+
+* **App Frame:** A top-level component (e.g. App.tsx) that sets up the overall layout. Since we want a full-screen map, the App will likely render the <MapView /> as a background element and overlay UI components on top of it. We can use Tailwind utility classes (and Shadcn components) to position elements. Possibly structure:
+* A small **Header bar** at the top of the screen (or a floating overlay) with the app title (e.g. *“Address Mapper”*) on the left and some control icons on the right. Controls might include a button to toggle theme (sun/moon icon) and a button to open the Past Routes panel (e.g. a history or list icon). We will keep this header minimal to not obstruct the map. It can be translucent or hidden entirely if we want a super-clean look, but a simple top bar provides context and navigation.
+* The **MapView** component fills the screen beneath the header (using CSS absolute positioning or flex layout to take remaining space).
+* An **Address List Panel** – this could be a sidebar or a collapsible panel that shows the list of addresses in the current route. We want the map to be mostly visible, so instead of a permanent sidebar, we might implement this as a collapsible drawer or a floating panel. For example, a panel that slides up from the bottom containing the list of stops. The user can expand or collapse it. On large screens, it could instead be a side panel. For our design, we lean towards a bottom sheet (mobile-friendly). We will use Shadcn’s **Sheet** component for this: a Sheet can slide from bottom and show content (addresses) while the map is still visible behind it (dimmed or partially visible). The address entries inside could be simple rows or Shadcn **Cards**.
+  + Each address entry will display the address (probably the standardized version, since that’s the cleaned one) and possibly some icon indicating status (e.g., valid or needs attention if geocode failed). It will also have an **Edit** button (could be a small pencil icon button).
+  + Edit behavior: When user clicks edit on an address, we could open a small modal (Shadcn **Dialog**) that contains a text field (Shadcn **Input** component) pre-filled with the address, and Save/Cancel buttons. Alternatively, we could allow inline editing directly in the list (e.g. turn the address text into an input on that row). A modal dialog is straightforward and ensures the user focuses on one edit at a time. We'll implement with a Dialog for clarity. On save, we call the /geocode-address endpoint and update that address’s data in Zustand store (which triggers the map marker and list UI to update).
+  + If an address fails geocoding (e.g. not found), we should indicate that (maybe highlight it in the list and show an error message or icon). The user can then edit it to fix typos.
+* A **Past Routes Panel:** Triggered by the “history” button in the header. This will use Shadcn’s **Dialog** or **Sheet** as well (depending on desired style). Options:
+  + A full-screen modal (Dialog) listing past routes (perhaps better on mobile).
+  + A side Sheet sliding from left or right on larger screens.
+  + We'll use a **Dialog** for simplicity: clicking the history button opens a Dialog with a list of saved routes.
+  + Each route entry shows a small thumbnail image (the one provided by backend) and basic info (maybe date, and number of stops or route name). The thumbnail gives a visual cue of the route shape/location.
+  + Selecting a route (clicking it) will close the dialog and load that route’s data (triggering the map to update markers to those addresses and showing the address list panel with that route’s addresses). This likely means calling GET /api/routes/{id} to get the details, or we could have included all details in the list API. To reduce complexity, we might have the list API already include all addresses for each route (if not too heavy), or just call again for details.
+  + If no past routes are saved yet, the list shows an empty state message.
+* **Theme Toggle:** We’ll add a theme switch in the header (probably an icon button that toggles between sun and moon). Under the hood, we use the Shadcn **ThemeProvider** context (which we will implement as per Shadcn docs[[22][23]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=)). This context stores a state 'light' | 'dark' | 'system'. Initially it reads the user’s OS preference (and any saved preference from localStorage). It then applies the appropriate class to <html> (.dark for dark mode or none for light). We will also provide a toggle UI:
+  + We can use a simple Button from Shadcn with an icon: if current theme is dark, show the Sun icon (indicating clicking will switch to light); if light, show Moon (for dark). If system, we might cycle through or treat system as one state.
+  + Alternatively, a three-state toggle (light/dark/system) could be done with a Select or a ToggleGroup, but a simple two-state might suffice (manual vs auto).
+  + On toggle, we call setTheme('dark' or 'light') from the theme context. The ThemeProvider will store this in localStorage and update the class on document. Shadcn’s example does exactly that (using window.matchMedia to handle system mode)[[24]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=useEffect%28%28%29%20%3D,documentElement)[[25]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=root.classList.add%28theme%29%20). We will follow that logic.
+  + All Tailwind classes like bg-white or text-black in components will automatically switch under .dark root as we design them with dark variants or rely on Shadcn’s component styling which already includes dark styles.
+  + Note: The map itself – if we want a dark map when in dark mode – we might need a separate dark map style. For example, we could use a different style JSON (like a dark-themed tile set) when dark mode is active. This could be an enhancement: MapLibre can switch style on the fly. We might use a MapTiler dark style (requires key) or an open dark style (MapLibre’s demo has a “osm-bright-dark” style URL as well[[26]](https://github.com/maplibre/demotiles#:~:text=OpenMapTiles%2C%20centered%20around%20Innsbruck%2C%20Austria,terrain%2Fstyle.json%20Debug)). For now, we might keep the map style constant (the demo style is actually fairly simple with colored countries; in dark mode it might not invert). This is a polish item we can address if time permits by either using a dark style source or adjusting map colors via custom style.
+* **Minimal UI & Responsiveness:** We aim for a clean interface focused on the map. The address list panel can overlay part of the map, but the user should be able to hide it to see the map fully. We can start with a simple approach: the list is either shown or hidden. Perhaps a small button or drag-handle on the panel to collapse it. Using Shadcn’s Sheet component, it might already allow swipe down to close on mobile, etc. The layout should be responsive:
+* On desktop, maybe the address list could appear as a side panel on the left of the map, since there is more horizontal space. We could use Shadcn’s **Sidebar** or simply a two-column layout. But to keep things simple, we might stick to a bottom sheet for all form factors for now.
+* All components from Shadcn (dialogs, sheets) are responsive by default (they use Radix UI under the hood). We just need to ensure appropriate sizes (e.g., the Past Routes dialog could be max-w-md width on desktop centered, etc.).
+* The map will automatically resize when containers change, but we may need to call map.resize() on the MapLibre instance if the container is revealed or resized (for example, after collapsing the list). We will handle that by calling map.resize() in an effect when relevant layout state changes (like when we hide/show panels).
+* **Error Handling & Feedback:** If the backend returns any errors (e.g., address not found or server error), the frontend should handle gracefully. We can utilize Shadcn’s **Toast** component to show brief messages (for example, “Address not found, please refine it.” or “Failed to load routes, try again.”). We can add the Toast utility via Shadcn if needed. Additionally, invalid addresses could be highlighted in the list.
+* **Performance Considerations:** With Vite and our chosen libraries, the app should be quite performant and lightweight. MapLibre GL is probably the heaviest asset (~~500KB gzipped). We are avoiding large UI frameworks; Shadcn components are tree-shaken and only what we use is included. Zustand is tiny. Using the Tailwind JIT (just-in-time) via the plugin ensures only necessary CSS is generated. We will also enable production optimizations in Vite for the final build (which is default when running pnpm build). Bundle size should remain reasonable – likely dominated by MapLibre and perhaps Radix (Radix UI components for Shadcn might add some weight, but only the ones we use).
+* **Future Enhancements (not immediate requirements but noted):**
+* *Routing optimization:* possibly integrate an API to optimize the address order or get driving directions polyline. (Could use a service like OSRM or Google Directions in future).
+* *Address autocomplete:* when editing or adding addresses, integrate an autocomplete API (Google Places or MapTiler Geocoding) to assist users.
+* *User accounts:* if multiple users or to persist routes in cloud.
+* *Multiple route planning:* planning and comparing multiple alternative routes, etc.
+
+Given the above design, we will now detail the steps to implement this systematically.
+
+## Implementation Steps
+
+Below is a step-by-step breakdown of how the coding agent (AI developer) should create the application. These steps are structured to follow best practices and ensure the agent does not need to search externally for details:
+
+### 1. Initialize Frontend Project
+
+* **Scaffold with Vite:** Run the Vite project creation command using pnpm:
+* pnpm create vite@latest address-mapper
+* During the interactive prompts, choose **React** as the framework and **TypeScript + SWC** as the variant (for fast TS transpilation). This creates the basic project structure in the address-mapper directory with an App.tsx, etc.
+* **Project Setup Check:** Verify the project runs. cd address-mapper and run pnpm install (to install dependencies) and then pnpm run dev to ensure the base app starts on localhost.
+
+### 2. Install and Configure Tailwind CSS 4
+
+* **Install Tailwind & Plugin:**
+* pnpm add tailwindcss @tailwindcss/vite
+* This adds Tailwind and the official Vite plugin[[27]](https://ui.shadcn.com/docs/installation/vite#:~:text=pnpmnpmyarnbun).
+* **Initialize Tailwind (optional step):** Tailwind v4 with Vite plugin doesn’t require tailwind.config.js by default, but we will create one for dark mode setting. Generate a default config with:
+* npx tailwindcss init
+* (This might create a tailwind.config.cjs with basic content pointing to ./index.html and ./src/\*\*/\* as content). If it doesn’t add content paths or darkMode, edit the file as described in the Tailwind Configuration above.
+* **Configure Tailwind plugin in Vite:** Open vite.config.ts. Import the plugin and add it to the plugins array as shown earlier. Ensure it’s imported from "@tailwindcss/vite" and included after the react plugin[[11]](https://tailwindcss.com/docs/installation/using-vite#:~:text=Add%20the%20,your%20Vite%20configuration). For example:
+* import react from '@vitejs/plugin-react';
+  import tailwindcss from '@tailwindcss/vite';
+  export default defineConfig({
+   plugins: [react(), tailwindcss()],
+   // ...
+  });
+* **Create Tailwind CSS file:** In src/ open or create index.css (Vite’s React template usually has src/index.css already imported in main.tsx). Replace its contents with just:
+* @import "tailwindcss";
+* This brings in all Tailwind base styles[[12]](https://ui.shadcn.com/docs/installation/vite#:~:text=Replace%20everything%20in%20,the%20following). Remove any default styles the template had (the Vite template has some example styles – those can be removed since we’ll use Tailwind for everything).
+* **Verify Tailwind Working:** Add a test class to App.tsx (e.g., give the outer div a className="p-4 text-center text-xl text-blue-500") and run pnpm dev. If Tailwind is set up correctly, you should see styled text. If not, check console for errors – likely misconfigured plugin or content paths. Tailwind should work because the plugin will automatically process the CSS import and scan files in dev mode.
+
+### 3. Integrate Shadcn/UI Library
+
+* **Initialize Shadcn:**
+* pnpm dlx shadcn@latest init
+* Respond to prompts: Choose **Neutral** base color, accept default component folder (components), and default tailwind CSS file path (src/index.css). The CLI will set up components.json and might add some boilerplate (like a default font CSS if any, but in Vite it might not unless needed). It also usually adds shadcn’s utils if required (like lib/utils.ts for combining classNames, etc.).
+* **Add required components:** Now, one by one, add the components we need:
+* **Core UI components:**
+* pnpm dlx shadcn@latest add button
+  pnpm dlx shadcn@latest add input
+  pnpm dlx shadcn@latest add dialog
+  pnpm dlx shadcn@latest add sheet
+  pnpm dlx shadcn@latest add label
+  + button gives us a styled <Button> (for general use).
+  + input provides a styled input field and likely also brings in <Label> if not, we add Label explicitly (we did above).
+  + dialog for modal dialogs (used in editing address or generic modals).
+  + sheet for the slide-over panel (used for Past Routes or maybe address list on mobile).
+  + We might also run pnpm dlx shadcn@latest add switch if we decide to use a toggle switch for theme instead of an icon button.
+  + If we want to display a scrollable list nicely, we might use scroll-area component for a custom scrollbar, but not necessary; default will do.
+  + If we anticipate using a table for address list, table could be added, but a simple list in divs or ul/li might suffice with styling.
+* **Icon library:** Shadcn uses Lucide icons in some components (and we will for theme toggle). Ensure lucide-react is installed:
+* pnpm add lucide-react
+* After adding, we can use icons like <Sun /> and <Moon /> by importing from 'lucide-react'.
+* **Verify Shadcn components:** The CLI should have created a components/ui/ folder with files like button.tsx, input.tsx, etc., each exporting the component. They typically depend on Radix UI library, which the CLI would have installed (check package.json for @radix-ui/react-dialog, etc. – they should be there). If not, the CLI might prompt to install them or automatically did. If something is missing, manually install any peer deps as needed.
+* **Tailwind base styles for Shadcn:** The Shadcn components might require some base Tailwind styles (like for dark mode or ring outlines). In older versions, they recommended adding @import "components/ui/globals.css"; somewhere. Check if the CLI added any import in index.css. If not, see if a globals.css file exists. If yes, import it. For example, sometimes shadcn's button styles rely on certain CSS vars provided in a globals.css. We should look at any notes the CLI output after adding components. Often, they manage it internally now. If the buttons look styled properly (with the neutral color brand) when used, then it’s fine.
+* **Set up Theme Context:** Create a file src/components/theme-provider.tsx as per Shadcn's dark mode documentation. We can largely copy their provided code[[28]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=Copy%20import%20,react)[[22]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=). This context will:
+* Store theme in state (default "system" or from localStorage).
+* On effect, apply the class to document.documentElement (html). If theme is "system", determine actual via window.matchMedia.
+* Provide a setTheme function that also persists the choice.
+* Export a hook useTheme() to access the context.
+* We will use defaultTheme = "system" to start with system preference.
+* Example snippet (simplified):
+* import { createContext, useContext, useState, useEffect } from 'react';
+  type Theme = "light" | "dark" | "system";
+  interface ThemeContextValue { theme: Theme; setTheme: (theme: Theme) => void; }
+  const ThemeContext = createContext<ThemeContextValue>({ theme: "system", setTheme: () => {} });
+  export const ThemeProvider = ({ children, defaultTheme = "system" }: { children: React.ReactNode, defaultTheme?: Theme }) => {
+   const [theme, setThemeState] = useState<Theme>(() => {
+   const ls = localStorage.getItem("theme");
+   return (ls as Theme) || defaultTheme;
+   });
+   useEffect(() => {
+   const root = document.documentElement;
+   root.classList.remove("light", "dark");
+   if (theme === "system") {
+   // check OS theme
+   const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+   root.classList.add(systemDark ? "dark" : "light");
+   } else {
+   root.classList.add(theme);
+   }
+   }, [theme]);
+   const setTheme = (t: Theme) => {
+   localStorage.setItem("theme", t);
+   setThemeState(t);
+   };
+   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
+  };
+  export const useTheme = () => useContext(ThemeContext);
+* This is essentially what Shadcn docs provide[[22]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=)[[25]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=root.classList.add%28theme%29%20).
+* Wrap the application with this provider. In src/main.tsx, around the <App />, do:
+* import { ThemeProvider } from "./components/theme-provider";
+  createRoot(document.getElementById('root')!).render(
+   <React.StrictMode>
+   <ThemeProvider defaultTheme="system">
+   <App />
+   </ThemeProvider>
+   </React.StrictMode>
+  );
+* **Implement Theme Toggle UI:** We will create a component ModeToggle.tsx (or integrate into header) that uses useTheme(). If using an icon button:
+* import { Button } from "@/components/ui/button";
+  import { Sun, Moon } from "lucide-react";
+  import { useTheme } from "@/components/theme-provider";
+  export function ModeToggle() {
+   const { theme, setTheme } = useTheme();
+   // Determine current effective mode (for icon display):
+   const effectiveTheme = theme === "system"
+   ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+   : theme;
+   return (
+   <Button variant="ghost" size="icon" onClick={() => {
+   // toggle between light and dark (keeping "system" out once user toggles)
+   setTheme(effectiveTheme === "dark" ? "light" : "dark");
+   }} aria-label="Toggle theme">
+   {effectiveTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+   </Button>
+   );
+  }
+* We use a Shadcn ghost icon button style (transparent background) and display Sun icon when in dark mode (meaning clicking will go to light) and Moon icon when in light mode. We decided that toggling goes between explicit light and dark. If the user was on system and toggles, we can either (as above) interpret current system state as the base and flip it. Another approach is if theme === "system", just setTheme("dark") or always cycle through 3 states (light -> dark -> system). For simplicity, two-state toggle is fine. We assume once user toggles, they override system preference.
+
+This component can be placed in the header.
+
+### 4. Implement Layout and Core Components
+
+* **App Layout (App.tsx):** Design the overall structure:
+* function App() {
+   return (
+   <div className="relative w-full h-full">
+   {/\* Header \*/}
+   <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-white/80 dark:bg-neutral-800/80 backdrop-blur">
+   <h1 className="text-lg font-bold">Address Mapper</h1>
+   <div className="flex items-center gap-2">
+   <ModeToggle />
+   <Button variant="outline" onClick={openPastRoutes}>Past Routes</Button>
+   {/\* Could be an icon button, outline style for now \*/}
+   </div>
+   </div>
+   {/\* Main Map View \*/}
+   <MapView />
+   {/\* Address List Sheet \*/}
+   <Sheet open={isListOpen} onOpenChange={setListOpen} position="bottom" size="half">
+   <SheetContent className="h-[70%] overflow-y-auto p-4">
+   <SheetHeader>
+   <SheetTitle>Addresses</SheetTitle>
+   <SheetDescription>Edit or review the addresses in this route.</SheetDescription>
+   </SheetHeader>
+   <div className="space-y-2">
+   {addresses.map((addr, idx) => (
+   <AddressItem key={idx} address={addr} onEdit={() => editAddress(idx)} />
+   ))}
+   </div>
+   </SheetContent>
+   <SheetTrigger asChild>
+   {/\* some button or drag handle to open \*/}
+   </SheetTrigger>
+   </Sheet>
+   {/\* Past Routes Dialog \*/}
+   <Dialog open={isHistoryOpen} onOpenChange={setHistoryOpen}>
+   <DialogContent>
+   <DialogHeader>
+   <DialogTitle>Past Routes</DialogTitle>
+   </DialogHeader>
+   {routes.length === 0 ? (
+   <p className="text-sm text-gray-500">No past routes saved.</p>
+   ) : (
+   <div className="grid gap-2">
+   {routes.map(route => (
+   <Button key={route.id} variant="secondary" className="justify-start" onClick={() => loadRoute(route.id)}>
+   {/\* Use route thumbnail and info in button content \*/}
+   <img src={route.thumbnail} alt="route thumbnail" className="w-12 h-12 mr-2 rounded object-cover" />
+   <span>{route.name || formatDate(route.date)}</span>
+   </Button>
+   ))}
+   </div>
+   )}
+   <DialogFooter>
+   <Button onClick={() => setHistoryOpen(false)}>Close</Button>
+   </DialogFooter>
+   </DialogContent>
+   </Dialog>
+   {/\* Edit Address Dialog (if using modal for edit) \*/}
+   {editIdx !== null && (
+   <Dialog open={true} onOpenChange={closeEdit}>
+   <DialogContent>
+   <DialogHeader><DialogTitle>Edit Address</DialogTitle></DialogHeader>
+   <div className="space-y-2 py-2">
+   <Label htmlFor="addr">Address:</Label>
+   <Input id="addr" value={editText} onChange={...} />
+   </div>
+   <DialogFooter>
+   <Button onClick={saveEdit}>Save</Button>
+   <Button variant="outline" onClick={closeEdit}>Cancel</Button>
+   </DialogFooter>
+   </DialogContent>
+   </Dialog>
+   )}
+   </div>
+   );
+  }
+* The above is a conceptual example of how we might use Shadcn components:
+* Header: Absolutely positioned, semi-transparent white (with backdrop blur) so map is visible behind. Contains title and two actions: ModeToggle and a Past Routes button.
+* MapView: placed underneath header (maybe as a sibling but we might need to ensure it fills screen except header area – using absolute positioning for header and letting map take full height, the header overlays it).
+* Address List: Using Shadcn’s Sheet component. SheetTrigger could be a drag-handle or a button but in this case, we programmatically open it via state. Alternatively, we might not use SheetTrigger at all and control open via state (like isListOpen). We show SheetContent with the addresses.
+  + Each address is rendered with a custom subcomponent AddressItem (which could show the address text and an edit icon button).
+  + We attach onEdit handler to open the edit dialog.
+* Past Routes: Using Dialog for simplicity. When open, shows a list of past route entries. We use a Button for each saved route, including the thumbnail image (as an <img> on the left) and a name or date. (Alternatively, design as a card or just a list item – using Button is a quick way to get a nicely styled clickable item).
+* Edit Address Dialog: If editIdx is not null, we render a Dialog for editing that address. (We can also use controlled Dialog open state similarly).
+
+The state variables (isListOpen, isHistoryOpen, editIdx, editText, addresses, routes) would come from Zustand or React state. We likely store addresses and routes in Zustand global store (so MapView and others can access). UI state like which dialogs open could be local to App or also in Zustand if multiple components need to open/close them. For simplicity, could manage open states in App with useState.
+
+* **MapView component:** This will implement the actual MapLibre map logic:
+* import maplibregl from 'maplibre-gl';
+  import 'maplibre-gl/dist/maplibre-gl.css';
+  import { useEffect, useRef } from 'react';
+  import { useRouteStore } from '@/store/routeStore'; // hypothetical Zustand store
+
+  const MapView = () => {
+   const mapContainer = useRef(null);
+   const addresses = useRouteStore(state => state.addresses);
+   const mapRef = useRef<maplibregl.Map|null>(null);
+   useEffect(() => {
+   // Initialize map on first mount:
+   if (mapContainer.current && !mapRef.current) {
+   mapRef.current = new maplibregl.Map({
+   container: mapContainer.current,
+   style: 'https://demotiles.maplibre.org/style.json',
+   center: [0, 0],
+   zoom: 2
+   });
+   // Optionally add navigation controls:
+   mapRef.current.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+   }
+   // On unmount cleanup:
+   return () => { mapRef.current?.remove(); mapRef.current = null; };
+   }, []);
+   useEffect(() => {
+   const map = mapRef.current;
+   if (!map) return;
+   // Remove existing markers (we can track them in an array for removal).
+   // For simplicity, remove all markers by tracking them:
+   markersRef.current.forEach(m=>m.remove());
+   markersRef.current = [];
+   // Fit map to bounds of all addresses:
+   const bounds = new maplibregl.LngLatBounds();
+   addresses.forEach(addr => {
+   if (!addr.longitude || !addr.latitude) return;
+   const marker = new maplibregl.Marker().setLngLat([addr.longitude, addr.latitude]).addTo(map);
+   markersRef.current.push(marker);
+   bounds.extend([addr.longitude, addr.latitude]);
+   });
+   if (!bounds.isEmpty()) {
+   map.fitBounds(bounds, { padding: 50, duration: 500 });
+   }
+   }, [addresses]);
+   return <div ref={mapContainer} className="w-full h-full" />;
+  }
+* This pseudocode:
+* uses a ref for the map container and map object.
+* On first mount, creates the map.
+* On addresses change, updates markers and re-fits the view. We keep an array markersRef.current to track existing markers to remove them before adding new ones to avoid duplicates.
+* If addresses is empty, we might set a default center/zoom.
+* We call fitBounds to ensure all markers are visible (with padding so they’re not on edges).
+* We might want to differentiate the start and end marker (e.g., color them differently or use numbers). That could be an enhancement: MapLibre’s Marker can take a custom element (we could inject a number label).
+* The map container covers the whole viewport (since App’s container is full). The header is absolutely on top, so map behind it.
+
+Ensure to handle map’s container sizing (the parent .relative w-full h-full should be the full viewport – likely we need to ensure html/body/ #root are 100% height in CSS. The Vite template’s index.css might not have that, so add:
+
+html, body, #root {
+ height: 100%;
+}
+
+In index.css above the @import, or in a separate global CSS block (the Stadia tutorial also recommended similar CSS[[29]](https://docs.stadiamaps.com/tutorials/getting-started-with-maplibre-react-components/#:~:text=html%2C%20body%2C%20,color%3A%20%23222%3B)).
+
+* **AddressItem component:** A small component to render each address in the list. For example:
+* const AddressItem = ({ address, onEdit }) => (
+   <div className="flex items-center justify-between p-2 rounded border">
+   <div>
+   <p className="text-sm font-medium">{address.standardized || address.original}</p>
+   {/\* maybe show original if standardized is too abbreviated or as tooltip \*/}
+   </div>
+   <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
+   </div>
+  );
+* We could style it more (e.g. if address not found, border red, etc., based on address.status property).
+* **Wiring up actions:** We need functions like openPastRoutes (sets isHistoryOpen = true), editAddress(idx) (sets editIdx to index and maybe preload editText), saveEdit (calls backend then updates store), loadRoute(id) (calls backend to fetch route and update store, then closes history dialog and opens address list panel perhaps). These functions will use the backend API. We should define an API utility (using fetch or axios). Possibly straightforward:
+* loadRoute(id): fetch('/api/routes/'+id).then(res => res.json()).then(data => set route store addresses to data.addresses etc.).
+* saveEdit: fetch('/api/geocode-address', { method:'PUT', body: JSON.stringify({...}) }).then(res=>res.json()).then(updatedAddr => update that address in Zustand store).
+* parseAndGeocode for initial input: perhaps invoked when user first enters addresses or to process a new input. However, how does the user input the initial addresses? The requirements didn't specify a clear input UI for addresses because possibly they imagined it being fed from AI. We might simulate it by having a simple textarea or maybe assume initial addresses come via an AI call behind scenes. Maybe an "Import addresses" button which triggers an OpenAI parsing call on some text. But that might be out of scope for UI; perhaps the addresses will be provided programmatically to the frontend (not likely). Alternatively, we consider the simplest: user manually enters addresses one by one via an input field + add button. However, the conversation suggests an AI is involved in parsing some job details to addresses. For now, perhaps we can include a temporary input (maybe in the header or a dedicated section) for demonstration: e.g., a Textarea where user can paste multiple lines and a button "Map Addresses" which calls parse-and-geocode (the backend might actually ignore parsing and just split lines if multiple lines given). This part is a bit open-ended, but we'll assume we either have a text input method or that the app is primarily fed by an external text (like maybe an email -> the backend called parse automatically). To keep requirements focused, we mention the possibility of a form for input, but it's optional as the context was more on processing than input UI.
+
+We will nonetheless include in the plan an "Add addresses" capability: - Possibly a floating button "New Route" that when clicked, opens a Dialog with a Textarea to paste addresses, then calls backend. Or simply instruct user to use an external interface.
+
+### 5. Backend Implementation Outline
+
+Although the coding agent will primarily focus on front-end initially, the backend needs to be set up as well. Outline for coding agent:
+
+* **Initialize Go Module:** Create a new Go project (if not already existing). For example:
+* mkdir backend && cd backend
+  go mod init addressmapper
+* **Import necessary packages:** We will use standard library net/http for routing or perhaps a simple router like Gorilla Mux or Echo for convenience (to parse JSON easily). For brevity, standard http.HandleFunc is fine.
+* **Handlers:**
+* /api/parse-and-geocode: expects JSON input like { "text": "...multi-line or unstructured..." } or perhaps { "addresses": ["addr1", "addr2", ...] }. The handler will:
+  + If text is provided, call OpenAI API. We need the OpenAI API key configured (e.g. via env). We can use github.com/sashabaranov/go-openai or do a direct HTTP request. But coding that might be complex; since user specifically said they want GPT-4, maybe they plan to handle that differently. Possibly skip details – just mention calling OpenAI with GPT-4 to extract addresses. This is a research doc, so describing is fine, actual integration can be done by the agent with an API call.
+  + Then for each address string, call geocoder. Implement a function GeocodeAddress(addr string) (StandardizedAddr, lat, lng, error). Use Census API: construct URL like:
+  + url := fmt.Sprintf("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=%s&benchmark=Public\_AR\_Current&format=json", url.QueryEscape(addr))
+    resp, \_ := http.Get(url)
+    // parse JSON...
+  + The response JSON will have maybe result.result.addressMatches array. We take the first match. It contains a matchedAddress (which is the standardized address) and coordinates (coordinates.x and coordinates.y for longitude and latitude).
+  + Collect results in a slice. If any address fails (no match), still include it but maybe with latitude=null to indicate not found.
+  + Generate thumbnail: Use go-staticmaps. For using it:
+  + Import github.com/flopp/go-staticmaps and github.com/fogleman/gg (go-staticmaps relies on gg for drawing).
+  + For example:
+  + ctx := staticmaps.NewContext()
+    ctx.SetSize(300, 200)
+    for each address with coords:
+     ctx.AddObject(staticmaps.NewMarker(s2.LatLngFromDegrees(lat, lng), color.RGBA{...}, 12.0))
+    // Optionally, add a path:
+    if len(points) > 1 {
+     ctx.AddObject(staticmaps.NewPath(pointsSlice, color.RGBA{0,0,255,255}, 2.0))
+    }
+    img, err := ctx.Render()
+    if err == nil {
+     var buf bytes.Buffer
+     png.Encode(&buf, img)
+     thumbBase64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+     // prepend data URI scheme
+     thumbDataURI := "data:image/png;base64," + thumbBase64
+    }
+  + Note: need to generate s2.LatLng from degrees (the library uses Google S2 geometry). We can do s2.LatLngFromDegrees(lat, lng).
+  + Use staticmaps.NewMarker for each coordinate with a distinct color for start/end maybe. Keep it simple: all same color.
+  + Use NewPath with a slice of positions (each position can be created by s2.LatLngFromDegrees(lat, lng)) to connect them in order.
+  + Return JSON as specified in Response Format earlier.
+* /api/geocode-address: expects { "address": "string" }. Call GeocodeAddress, return { "standardized": "...", "latitude": ..., "longitude": ...} or error.
+* /api/routes (GET): return list of saved routes (probably stored in memory list savedRoutes). Each route in list can include id, name, date, thumbnail. (We might not store full thumbnail for every route in memory due to size; but since thumbnails are small, could be okay. Alternatively, store path to a saved PNG file and serve it via static file. But that complicates things. We'll likely just store the base64 or regenerate on the fly each time user opens history. Caching it makes sense though. Maybe store base64 in the route struct.)
+* /api/routes/{id}: find the route in memory (or DB) by id, return its details (addresses + thumbnail, etc).
+* If implementing /api/routes/{id}/save, it would just save current in memory with an ID. But if we auto-save after parse, that might not be needed. We can decide to auto-add any result from parse-and-geocode into the saved routes list with a timestamp and incrementing ID.
+* **Data structures:** define types like:
+* type Address struct {
+   Original string `json:"original"`
+   Standardized string `json:"standardized"`
+   Latitude float64 `json:"latitude,omitempty"`
+   Longitude float64 `json:"longitude,omitempty"`
+  }
+  type Route struct {
+   ID string `json:"id"`
+   Date time.Time `json:"date"`
+   Name string `json:"name,omitempty"`
+   Addresses []Address `json:"addresses"`
+   Thumbnail string `json:"thumbnailPNG"`
+  }
+* Use a global var routes = map[string]Route{} or similar for storage.
+* **CORS:** Since our frontend (likely running on Vite dev at localhost:5173) will call the Go backend (maybe at localhost:8080), enable CORS in the Go server responses for development. We can write a simple middleware to add Access-Control-Allow-Origin: \* for simplicity in dev. (In production, the frontend would be served from same domain or we configure properly.)
+* **Run server:** The coding agent should be instructed to run the Go server (on say port 8080) concurrently when testing with the React dev server. Alternatively, the front dev server can proxy API calls to backend (vite allows proxy config). Simpler: configure in vite.config.ts:
+* server: { proxy: { '/api': 'http://localhost:8080' } }
+* That way, AJAX to /api/... will be forwarded.
+* **Testing end-to-end:** After implementing, test the flow:
+* Start backend, start frontend.
+* Use the UI to input addresses or trigger parse call. If no UI for input, maybe manually call parse API via browser devtools for now, or pre-populate some data in state for demonstration (less ideal).
+* Ensure addresses show on map, edits update, saving route shows in history, and loading from history works (clears current addresses and loads selected).
+* **Bundle and size:** When everything works, build the production bundle via pnpm run build. This will tree-shake and optimize. Tailwind will purge unused classes (via content scanning). The output should be a set of static files ready to deploy (which could be served by the Go server or a separate static host).
+* **Dark mode verification:** Switch OS theme or use the toggle to confirm the UI changes (colors invert, etc.). The default Shadcn Neutral palette will provide appropriate dark styles (e.g. the background of Dialog will automatically be dark in dark mode, etc., thanks to component classes including dark: variants).
+
+Throughout development, focus on correctness and clarity over brevity. Ensure that: - The coding agent uses the described commands and code patterns (no need to search the web because we’ve provided the instructions and examples). - All steps are followed in order (scaffolding, installing, configuring, then writing components, then backend). - Test frequently to catch issues early (especially tailwind integration or any Shadcn quirks).
+
+By following this comprehensive plan, the coding agent should be able to implement the Address Mapper application with all requested features. The end result will be a modern, responsive route mapping tool using open-source technologies, with a clean UI and support for dark mode, ready to assist users in planning and reviewing delivery routes.
+
+[[1]](https://www.smarty.com/articles/usps-api#:~:text=USPS%E2%80%99s%20address%20validation%20tool%20is,accepted%20USPS%20standardized%20address%20format) [[21]](https://www.smarty.com/articles/usps-api#:~:text=Image%3A%20USPS%20API%20example%20,output%20of%20validated%20address) The USPS address validation API
+
+<https://www.smarty.com/articles/usps-api>
+
+[[2]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=Geocoding%20is%20the%20process%20of,it%20is%20possible%20to%20geocode) [[3]](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html#:~:text=This%20service%20is%20designed%20for,from%20a%20MAF%2FTIGER%20benchmark%20database) geocoding.geo.census.gov
+
+<https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html>
+
+[[4]](https://github.com/maplibre/demotiles#:~:text=It%20demonstrates%20the%20usage%20of,the%20MapLibre%20World%20map%20style) [[26]](https://github.com/maplibre/demotiles#:~:text=OpenMapTiles%2C%20centered%20around%20Innsbruck%2C%20Austria,terrain%2Fstyle.json%20Debug) GitHub - maplibre/demotiles: Demo vector tiles and map style for web, helloworld and CI tests @MapLibre. Hosted directly on GitHub Pages, serverless, no keys.
+
+<https://github.com/maplibre/demotiles>
+
+[[5]](https://maplibre.org/maplibre-gl-js/docs/examples/display-a-map/#:~:text=const%20map%20%3D%20new%20maplibregl.Map%28,script) Display a map - MapLibre GL JS
+
+<https://maplibre.org/maplibre-gl-js/docs/examples/display-a-map/>
+
+[[6]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=A%20go%20,map%20images%20using%20OpenStreetMap%20tiles) [[7]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=func%20main%28%29%20,16.0%2C) [[8]](https://pkg.go.dev/github.com/flopp/go-staticmaps#:~:text=ctx.AddObject%28%20sm.NewMarker%28%20s2.LatLngFromDegrees%2852.514536%2C%2013.350151%29%2C%20color.RGBA,16.0%2C%20%29%2C) sm package - github.com/flopp/go-staticmaps - Go Packages
+
+<https://pkg.go.dev/github.com/flopp/go-staticmaps>
+
+[[9]](https://ui.shadcn.com/docs/installation/vite#:~:text=Start%20by%20creating%20a%20new,the%20React%20%2B%20TypeScript%20template) [[12]](https://ui.shadcn.com/docs/installation/vite#:~:text=Replace%20everything%20in%20,the%20following) [[13]](https://ui.shadcn.com/docs/installation/vite#:~:text=You%20will%20be%20asked%20a,components.json) [[14]](https://ui.shadcn.com/docs/installation/vite#:~:text=You%20can%20now%20start%20adding,components%20to%20your%20project) [[15]](https://ui.shadcn.com/docs/installation/vite#:~:text=The%20command%20above%20will%20add,then%20import%20it%20like%20this) [[16]](https://ui.shadcn.com/docs/installation/vite#:~:text=,%7D) [[17]](https://ui.shadcn.com/docs/installation/vite#:~:text=,%5D) [[18]](https://ui.shadcn.com/docs/installation/vite#:~:text=%2F%2F%20https%3A%2F%2Fvite.dev%2Fconfig%2F%20export%20default%20defineConfig%28,%7D%2C%20%7D%2C) [[27]](https://ui.shadcn.com/docs/installation/vite#:~:text=pnpmnpmyarnbun) Vite - shadcn/ui
+
+<https://ui.shadcn.com/docs/installation/vite>
+
+[[10]](https://dev.to/goldenekpendu/how-to-install-tailwind-v4-in-a-vite-project-g3d#:~:text=Since%20Tailwind%20v4%2C%20the%20process,and%20below%20are%20the%20steps) How to install Tailwind v4 in a Vite project - DEV Community
+
+<https://dev.to/goldenekpendu/how-to-install-tailwind-v4-in-a-vite-project-g3d>
+
+[[11]](https://tailwindcss.com/docs/installation/using-vite#:~:text=Add%20the%20,your%20Vite%20configuration) Installing Tailwind CSS with Vite - Tailwind CSS
+
+<https://tailwindcss.com/docs/installation/using-vite>
+
+[[19]](https://dev.to/djibrilm/react-state-management-with-zustand-5hl9#:~:text=Small%20size%20bundle%3A%20%20with,yet%20one%20of%20the%20performers) React state management with Zustand - DEV Community
+
+<https://dev.to/djibrilm/react-state-management-with-zustand-5hl9>
+
+[[20]](https://docs.stadiamaps.com/tutorials/getting-started-with-maplibre-react-components/#:~:text=Before%20adding%20the%20map%20to,gl%60%20package) [[29]](https://docs.stadiamaps.com/tutorials/getting-started-with-maplibre-react-components/#:~:text=html%2C%20body%2C%20,color%3A%20%23222%3B) Quickstart: MapLibre React Components - Stadia Maps Documentation
+
+<https://docs.stadiamaps.com/tutorials/getting-started-with-maplibre-react-components/>
+
+[[22]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=) [[23]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=) [[24]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=useEffect%28%28%29%20%3D,documentElement) [[25]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=root.classList.add%28theme%29%20) [[28]](https://ui.shadcn.com/docs/dark-mode/vite#:~:text=Copy%20import%20,react) Vite - shadcn/ui
+
+<https://ui.shadcn.com/docs/dark-mode/vite>
