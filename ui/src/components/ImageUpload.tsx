@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Upload, Loader2 } from "lucide-react"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
+import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 
 export function ImageUpload() {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,41 +19,31 @@ export function ImageUpload() {
 
   const handleImageUpload = async (file: File) => {
     setIsLoading(true)
-    
+
     try {
       // Convert file to base64
       const base64 = await fileToBase64(file)
-      
-      // Call the API
-      const response = await fetch('http://localhost:8080/v1/addresses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64
-        }),
-      })
 
-      if (!response.ok) {
-        throw new Error('Failed to process image')
-      }
-
-      const data = await response.json()
-      
-      if (data.error) {
-        throw new Error(data.error)
-      }
+      // Call the API using the new API configuration
+      const data = await apiRequest<{ addresses: Address[] }>(
+        API_ENDPOINTS.parseAddresses,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            image: base64
+          }),
+        }
+      )
 
       // Update the store with addresses
       const addresses: Address[] = data.addresses || []
       setAddresses(addresses)
-      
+
       // Open the address list to show results
       if (addresses.length > 0) {
         setAddressListOpen(true)
       }
-      
+
     } catch (error) {
       console.error('Error processing image:', error)
       // You could add a toast notification here

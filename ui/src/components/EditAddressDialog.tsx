@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useRouteStore } from "@/store/useRouteStore"
+import { useRouteStore, type Address } from "@/store/useRouteStore"
+import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 
 export function EditAddressDialog() {
   const editingIndex = useRouteStore(state => state.editingAddressIndex)
@@ -33,23 +34,17 @@ export function EditAddressDialog() {
 
     setIsLoading(true)
     try {
-      // Call the geocoding API
-      const response = await fetch('http://localhost:8080/v1/geocode-address', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: editText.trim()
-        }),
-      })
+      // Call the geocoding API using the new API configuration
+      const data = await apiRequest<Address>(
+        API_ENDPOINTS.geocodeAddress,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            address: editText.trim()
+          }),
+        }
+      )
 
-      if (!response.ok) {
-        throw new Error('Failed to geocode address')
-      }
-
-      const data = await response.json()
-      
       // Update the address in the store
       updateAddress(editingIndex, {
         original: editText.trim(),
