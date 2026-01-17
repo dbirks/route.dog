@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import type { ReactNode } from 'react'
 
 type Theme = "light" | "dark" | "system"
 
@@ -47,6 +48,7 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext)
   if (!context) {
