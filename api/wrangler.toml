@@ -1,8 +1,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "route-dog-dev"
-main = "src/index.py"
+main = "src/index.ts"
 compatibility_date = "2026-01-17"
-compatibility_flags = ["python_workers"]
 
 [observability]
 enabled = true

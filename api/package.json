@@ -1,0 +1,18 @@
+{
+	"name": "route-dog-api",
+	"version": "1.0.0",
+	"description": "Route.dog API - TypeScript Workers",
+	"main": "src/index.ts",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"deploy:dev": "wrangler deploy --env dev",
+		"deploy:prod": "wrangler deploy --env production"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250127.0",
+		"typescript": "^5.3.3",
+		"wrangler": "^3.84.1"
+	}
+}
