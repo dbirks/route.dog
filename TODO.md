@@ -4,6 +4,10 @@
 - Deployed API to Cloudflare Workers (production): https://route-dog-prod.pig.workers.dev
 - Deployed UI to Cloudflare Pages: https://11e4812e.route-dog.pages.dev
 - Collected sample address test data
+- **Created automated browser tests with Puppeteer** (test-browser.mjs, test-e2e-full.mjs)
+- **Verified UI loads correctly** - all critical elements present
+- **Tested API endpoints** - health check and geocoding working
+- **Generated test image with addresses** - ready for manual upload testing
 
 ## Pending Testing Tasks
 
@@ -79,6 +83,10 @@
 
 ### Quick API Test
 ```bash
+# Run automated API tests
+./test-manual.sh
+
+# Or manually:
 # Health check
 curl https://route-dog-prod.pig.workers.dev/health
 
@@ -87,6 +95,23 @@ curl -X PUT https://route-dog-prod.pig.workers.dev/v1/geocode-address \
   -H "Content-Type: application/json" \
   -d '{"address": "1600 Amphitheatre Parkway, Mountain View, CA 94043"}'
 ```
+
+### Automated Browser Tests
+```bash
+# Run simple browser test
+node test-browser.mjs
+
+# Run comprehensive E2E test
+node test-e2e-full.mjs
+```
+
+**Test Results** (as of 2026-01-18):
+- ✅ UI loads correctly
+- ✅ Upload button is present
+- ✅ API health check passes
+- ✅ Geocoding works correctly
+- ✅ No browser console errors
+- 📸 Screenshots saved: test-screenshot.png, test-final.png, test-addresses-image.png
 
 ### Test Image Upload
 1. Visit https://11e4812e.route-dog.pages.dev

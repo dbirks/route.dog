@@ -1,0 +1,23 @@
+{
+  "name": "david",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dbirks/route.dog.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dbirks/route.dog/issues"
+  },
+  "homepage": "https://github.com/dbirks/route.dog#readme",
+  "devDependencies": {
+    "puppeteer": "^24.35.0"
+  }
+}
