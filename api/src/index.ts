@@ -189,7 +189,18 @@ async function extractAddressesWithOpenAI(imageBase64: string, apiKey: string): 
 		throw new Error('No response from OpenAI');
 	}
 
-	const content = result.choices[0].message.content;
+	let content = result.choices[0].message.content;
+
+	// Strip markdown code fences if present
+	// OpenAI sometimes wraps JSON in ```json ... ```
+	content = content.trim();
+	if (content.startsWith('```')) {
+		// Remove opening fence (```json or ```)
+		content = content.replace(/^```(?:json)?\n?/, '');
+		// Remove closing fence
+		content = content.replace(/\n?```$/, '');
+		content = content.trim();
+	}
 
 	// Parse JSON array
 	try {
