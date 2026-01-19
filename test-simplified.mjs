@@ -2,7 +2,7 @@
 import puppeteer from 'puppeteer';
 
 async function testSimplified() {
-  console.log('🧪 Testing simplified redesign with demo button...\n');
+  console.log('🧪 Testing updated design (no cursive, street map, geolocator)...\n');
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -17,8 +17,8 @@ async function testSimplified() {
   page.on('console', msg => consoleMessages.push(`[${msg.type()}] ${msg.text()}`));
 
   try {
-    console.log('📍 Loading https://48aba09a.route-dog.pages.dev...\n');
-    await page.goto('https://48aba09a.route-dog.pages.dev', {
+    console.log('📍 Loading https://f412b6e7.route-dog.pages.dev...\n');
+    await page.goto('https://f412b6e7.route-dog.pages.dev', {
       waitUntil: 'networkidle0',
       timeout: 30000
     });
@@ -29,14 +29,16 @@ async function testSimplified() {
     console.log('✅ Page loaded\n');
 
     // Take initial screenshot
-    await page.screenshot({ path: '../test-simplified-1-initial.png' });
+    await page.screenshot({ path: '../test-updated-1-initial.png' });
     console.log('📸 Initial screenshot saved\n');
 
-    // Check for simplified design elements
+    // Check for design elements
     const designCheck = await page.evaluate(() => {
+      const logo = document.querySelector('.logo-sketch');
       return {
         title: document.querySelector('h1')?.textContent,
-        hasLogo: document.querySelector('.logo-sketch') !== null,
+        hasLogo: logo !== null,
+        logoFont: logo ? window.getComputedStyle(logo).fontFamily : 'none',
         demoButton: Array.from(document.querySelectorAll('button')).some(btn =>
           btn.textContent.includes('Demo')
         ),
@@ -45,15 +47,19 @@ async function testSimplified() {
         ),
         fonts: {
           body: window.getComputedStyle(document.body).fontFamily
-        }
+        },
+        // Check for geolocator control button
+        hasGeolocator: document.querySelector('.maplibregl-ctrl-geolocate') !== null
       };
     });
 
     console.log('🎨 Design Elements:');
     console.log(`   Title: ${designCheck.title}`);
     console.log(`   Logo class: ${designCheck.hasLogo ? '✅' : '❌'}`);
+    console.log(`   Logo font: ${designCheck.logoFont}`);
     console.log(`   Demo button: ${designCheck.demoButton ? '✅' : '❌'}`);
     console.log(`   Upload button: ${designCheck.uploadButton ? '✅' : '❌'}`);
+    console.log(`   Geolocator control: ${designCheck.hasGeolocator ? '✅' : '❌'}`);
     console.log(`   Body font: ${designCheck.fonts.body}`);
 
     // Click the demo button
@@ -78,7 +84,7 @@ async function testSimplified() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Take screenshot after clicking demo
-    await page.screenshot({ path: '../test-simplified-2-demo.png', fullPage: true });
+    await page.screenshot({ path: '../test-updated-2-demo.png', fullPage: true });
     console.log('📸 Demo screenshot saved\n');
 
     // Check if addresses loaded
@@ -120,7 +126,7 @@ async function testSimplified() {
 
   } catch (error) {
     console.error('❌ Test failed:', error.message);
-    await page.screenshot({ path: '../test-simplified-error.png' });
+    await page.screenshot({ path: '../test-updated-error.png' });
   } finally {
     await browser.close();
   }

@@ -7,7 +7,7 @@ export function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
-  
+
   const addresses = useRouteStore(state => state.addresses)
 
   // Initialize map
@@ -15,14 +15,26 @@ export function MapView() {
     if (mapContainer.current && !mapRef.current) {
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
-        style: 'https://demotiles.maplibre.org/style.json',
-        center: [0, 0],
-        zoom: 2
+        // Use OSM Liberty style - open source with street details
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [-122.4, 37.8], // San Francisco Bay Area
+        zoom: 10
       })
 
       // Add navigation controls
       mapRef.current.addControl(
         new maplibregl.NavigationControl({ showCompass: true }),
+        'top-right'
+      )
+
+      // Add geolocate control to track user location
+      mapRef.current.addControl(
+        new maplibregl.GeolocateControl({
+          positionOptions: {
+            enableHighAccuracy: true
+          },
+          trackUserLocation: true
+        }),
         'top-right'
       )
     }
@@ -48,20 +60,20 @@ export function MapView() {
     // Add new markers and fit bounds
     if (addresses.length > 0) {
       const bounds = new maplibregl.LngLatBounds()
-      
+
       addresses.forEach((address, index) => {
         if (address.longitude && address.latitude) {
-          // Create marker with custom color for first/last
+          // All markers same color - no special start/end
           const marker = new maplibregl.Marker({
-            color: index === 0 ? '#22c55e' : index === addresses.length - 1 ? '#ef4444' : '#3b82f6'
+            color: '#3b82f6' // Blue for all stops
           })
             .setLngLat([address.longitude, address.latitude])
             .setPopup(
               new maplibregl.Popup({ offset: 25 })
                 .setHTML(`
                   <div class="p-2">
-                    <p class="font-medium">${address.standardized || address.original}</p>
-                    <p class="text-sm text-gray-600">${index === 0 ? 'Start' : index === addresses.length - 1 ? 'End' : `Stop ${index + 1}`}</p>
+                    <p class="font-medium text-sm">Stop ${index + 1}</p>
+                    <p class="text-xs">${address.standardized || address.original}</p>
                   </div>
                 `)
             )
@@ -74,8 +86,8 @@ export function MapView() {
 
       // Fit map to show all markers
       if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, { 
-          padding: 50,
+        map.fitBounds(bounds, {
+          padding: { top: 100, bottom: 50, left: 50, right: 50 }, // Extra top padding for nav bar
           duration: 500
         })
       }
@@ -83,9 +95,10 @@ export function MapView() {
   }, [addresses])
 
   return (
-    <div 
-      ref={mapContainer} 
+    <div
+      ref={mapContainer}
       className="w-full h-full"
+      style={{ paddingTop: '56px' }} // Account for nav bar height
       id="map"
     />
   )

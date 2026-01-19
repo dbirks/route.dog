@@ -11,9 +11,6 @@ export function AddressItem({ address, index }: AddressItemProps) {
   const setEditingAddressIndex = useRouteStore(state => state.setEditingAddressIndex)
 
   const hasValidCoordinates = address.latitude !== 0 && address.longitude !== 0
-  const totalAddresses = useRouteStore.getState().addresses.length
-  const isStart = index === 0
-  const isEnd = index === totalAddresses - 1
 
   const handleEdit = () => {
     setEditingAddressIndex(index)
@@ -34,8 +31,6 @@ export function AddressItem({ address, index }: AddressItemProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          {isStart && <span className="text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Start</span>}
-          {isEnd && totalAddresses > 1 && <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">End</span>}
         </div>
 
         <p className="font-medium text-sm">
