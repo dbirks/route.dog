@@ -15,8 +15,8 @@ export function MapView() {
     if (mapContainer.current && !mapRef.current) {
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
-        // Use OSM Liberty style - open source with street details
-        style: 'https://tiles.openfreemap.org/styles/liberty',
+        // Use Positron style - clean, minimal look without terrain clutter
+        style: 'https://tiles.openfreemap.org/styles/positron',
         center: [-122.4, 37.8], // San Francisco Bay Area
         zoom: 10
       })
@@ -71,9 +71,9 @@ export function MapView() {
             .setPopup(
               new maplibregl.Popup({ offset: 25 })
                 .setHTML(`
-                  <div class="p-2">
-                    <p class="font-medium text-sm">Stop ${index + 1}</p>
-                    <p class="text-xs">${address.standardized || address.original}</p>
+                  <div style="padding: 8px; color: #1f1f1f;">
+                    <p style="font-weight: 500; font-size: 14px; margin: 0 0 4px 0;">Stop ${index + 1}</p>
+                    <p style="font-size: 12px; margin: 0; color: #4a4a4a;">${address.standardized || address.original}</p>
                   </div>
                 `)
             )
@@ -98,7 +98,6 @@ export function MapView() {
     <div
       ref={mapContainer}
       className="w-full h-full"
-      style={{ paddingTop: '56px' }} // Account for nav bar height
       id="map"
     />
   )

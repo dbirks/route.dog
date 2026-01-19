@@ -3,8 +3,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Rough pencil sketch font - NOT cursive */
-@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap');
+/* Indie Flower - playful hand-drawn font */
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
 
 /* Ensure full height for map container */
 html, body, #root {
@@ -112,10 +112,15 @@ body::before {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 
-  /* Rough sketch font only for logo - NOT cursive */
+  /* Indie Flower for logo */
   .logo-sketch {
-    font-family: 'Architects Daughter', cursive;
+    font-family: 'Indie Flower', cursive;
     font-weight: 400;
     letter-spacing: 0.02em;
   }
+}
+
+/* Offset map controls below nav bar */
+.maplibregl-ctrl-top-right {
+  top: 64px !important;
 }

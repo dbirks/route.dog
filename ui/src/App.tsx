@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { History, Sparkles, Zap } from "lucide-react"
+import { History, Zap } from "lucide-react"
 import { MapView } from "@/components/MapView"
 import { ModeToggle } from "@/components/ModeToggle"
 import { AddressListPanel } from "@/components/AddressListPanel"
@@ -22,39 +22,7 @@ function App() {
 
   const hasAddresses = addresses.length > 0
 
-  // Demo button - loads sample addresses
-  const loadDemo = () => {
-    const demoAddresses = [
-      {
-        original: "1600 Amphitheatre Parkway, Mountain View, CA 94043",
-        standardized: "1600 AMPHITHEATRE PKWY, MOUNTAIN VIEW CA 94043",
-        latitude: 37.4224764,
-        longitude: -122.0842499
-      },
-      {
-        original: "1 Apple Park Way, Cupertino, CA 95014",
-        standardized: "1 APPLE PARK WAY, CUPERTINO CA 95014",
-        latitude: 37.3348859,
-        longitude: -122.0090541
-      },
-      {
-        original: "1355 Market St, San Francisco, CA 94103",
-        standardized: "1355 MARKET ST, SAN FRANCISCO CA 94103",
-        latitude: 37.7767653,
-        longitude: -122.4170807
-      },
-      {
-        original: "1 Hacker Way, Menlo Park, CA 94025",
-        standardized: "1 HACKER WAY, MENLO PARK CA 94025",
-        latitude: 37.484722,
-        longitude: -122.148333
-      }
-    ];
-    setAddresses(demoAddresses);
-    setAddressListOpen(true);
-  };
-
-  // Test Full API - loads demo image through complete API flow
+  // Try Demo - loads demo image through complete API flow
   const loadDemoWithAPI = async () => {
     setIsLoadingApi(true);
 
@@ -124,21 +92,12 @@ function App() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadDemo}
-            className="gap-1.5"
-          >
-            <Sparkles className="w-4 h-4" />
-            Demo
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={loadDemoWithAPI}
             disabled={isLoadingApi}
             className="gap-1.5"
           >
             <Zap className="w-4 h-4" />
-            {isLoadingApi ? 'Testing...' : 'Test API'}
+            {isLoadingApi ? 'Loading...' : 'Try Demo'}
           </Button>
           <Button
             variant="outline"
@@ -167,16 +126,7 @@ function App() {
               and plot them on the map.
             </p>
             <ImageUpload />
-            <div className="pt-4 flex gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={loadDemo}
-                className="gap-1.5"
-              >
-                <Sparkles className="w-4 h-4" />
-                Try with demo data
-              </Button>
+            <div className="pt-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -185,7 +135,7 @@ function App() {
                 className="gap-1.5"
               >
                 <Zap className="w-4 h-4" />
-                {isLoadingApi ? 'Testing API...' : 'Test Full API'}
+                {isLoadingApi ? 'Loading...' : 'Or try a demo'}
               </Button>
             </div>
           </div>
