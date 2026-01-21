@@ -1,24 +1,18 @@
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { History, Zap } from "lucide-react"
 import { MapView } from "@/components/MapView"
-import { ModeToggle } from "@/components/ModeToggle"
 import { AddressListPanel } from "@/components/AddressListPanel"
 import { PastRoutesDialog } from "@/components/PastRoutesDialog"
 import { EditAddressDialog } from "@/components/EditAddressDialog"
 import { ImageUpload } from "@/components/ImageUpload"
+import { DynamicIsland } from "@/components/DynamicIsland"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 
 function App() {
   const [isLoadingApi, setIsLoadingApi] = useState(false)
-  const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
   const setAddresses = useRouteStore(state => state.setAddresses)
   const addresses = useRouteStore(state => state.addresses)
-
-  const openPastRoutes = () => setPastRoutesOpen(true)
-  const openAddressList = () => setAddressListOpen(true)
 
   const hasAddresses = addresses.length > 0
 
@@ -72,75 +66,31 @@ function App() {
 
   return (
     <div className="relative w-full h-full">
-      {/* Simple header */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-card/95 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-3">
-          <h1 className="logo-sketch text-2xl tracking-wide">
-            route.dog
-          </h1>
-          {hasAddresses && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openAddressList}
-            >
-              {addresses.length} stops
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadDemoWithAPI}
-            disabled={isLoadingApi}
-            className="gap-1.5"
-          >
-            <Zap className="w-4 h-4" />
-            {isLoadingApi ? 'Loading...' : 'Try Demo'}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={openPastRoutes}
-            aria-label="View past routes"
-          >
-            <History className="w-4 h-4" />
-          </Button>
-          <ModeToggle />
-        </div>
-      </div>
-
-      {/* Main Map View */}
+      {/* Full-screen Map View */}
       <MapView />
 
-      {/* Upload overlay when no addresses */}
+      {/* Hidden file upload input - triggered from DynamicIsland */}
+      <div className="hidden">
+        <ImageUpload />
+      </div>
+
+      {/* Welcome overlay when no addresses */}
       {!hasAddresses && (
-        <div className="absolute inset-0 z-5 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-          <div className="text-center space-y-4 p-8">
-            <h2 className="text-2xl font-semibold">
-              Upload a route photo
-            </h2>
-            <p className="text-muted-foreground max-w-md">
-              Take a photo of your delivery list and we'll extract the addresses
-              and plot them on the map.
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="text-center p-8 pointer-events-auto">
+            <h1 className="logo-sketch text-4xl mb-2">route.dog</h1>
+            <p className="text-muted-foreground">
+              Upload a photo of your delivery list
             </p>
-            <ImageUpload />
-            <div className="pt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={loadDemoWithAPI}
-                disabled={isLoadingApi}
-                className="gap-1.5"
-              >
-                <Zap className="w-4 h-4" />
-                {isLoadingApi ? 'Loading...' : 'Or try a demo'}
-              </Button>
-            </div>
           </div>
         </div>
       )}
+
+      {/* Dynamic Island - bottom floating control */}
+      <DynamicIsland
+        onTryDemo={loadDemoWithAPI}
+        isLoadingDemo={isLoadingApi}
+      />
 
       {/* Address List Panel */}
       <AddressListPanel />

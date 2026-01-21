@@ -120,7 +120,8 @@ body::before {
   }
 }
 
-/* Offset map controls below nav bar */
+/* Map controls positioning - slight offset from edge */
 .maplibregl-ctrl-top-right {
-  top: 64px !important;
+  top: 10px !important;
+  right: 10px !important;
 }
