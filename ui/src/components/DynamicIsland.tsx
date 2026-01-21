@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, Upload, Zap, History, Moon, Sun, MapPin } from "lucide-react"
+import { ChevronUp, ChevronDown, Upload, Zap, History, Moon, Sun, MapPin, Loader2 } from "lucide-react"
 import { useRouteStore } from "@/store/useRouteStore"
 import { useTheme } from "@/components/theme-provider"
 
@@ -31,7 +31,7 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
         style={{ borderRadius: 28 }}
         initial={false}
         animate={{
-          width: isExpanded ? 320 : hasAddresses ? 160 : 200,
+          width: isExpanded ? 320 : isLoadingDemo ? 200 : hasAddresses ? 160 : 200,
           height: isExpanded ? "auto" : 56,
         }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -48,7 +48,12 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
               onClick={toggleExpanded}
               className="w-full h-14 flex items-center justify-center gap-2 px-4 cursor-pointer hover:bg-accent/50 transition-colors"
             >
-              {hasAddresses ? (
+              {isLoadingDemo ? (
+                <>
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  <span className="font-medium">Loading demo...</span>
+                </>
+              ) : hasAddresses ? (
                 <>
                   <MapPin className="w-4 h-4 text-primary" />
                   <span className="font-medium">{addresses.length} stops</span>

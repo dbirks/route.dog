@@ -74,9 +74,9 @@ function App() {
         <ImageUpload />
       </div>
 
-      {/* Welcome overlay when no addresses */}
+      {/* Welcome overlay when no addresses - positioned above dynamic island */}
       {!hasAddresses && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bottom-32 z-10 flex items-center justify-center pointer-events-none">
           <div className="text-center p-8 pointer-events-auto">
             <h1 className="logo-sketch text-4xl mb-2">route.dog</h1>
             <p className="text-muted-foreground">
