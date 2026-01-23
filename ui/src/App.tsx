@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { MapView } from "@/components/MapView"
 import { StopsBottomSheet } from "@/components/StopsBottomSheet"
+import { StopDetailSheet } from "@/components/StopDetailSheet"
 import { PastRoutesDialog } from "@/components/PastRoutesDialog"
 import { EditAddressDialog } from "@/components/EditAddressDialog"
 import { ImageUpload } from "@/components/ImageUpload"
@@ -77,6 +78,9 @@ function App() {
 
       {/* Stops Bottom Sheet - shows when there are addresses */}
       <StopsBottomSheet />
+
+      {/* Stop Detail Sheet - shows when a stop is selected */}
+      <StopDetailSheet />
 
       {/* Past Routes Dialog */}
       <PastRoutesDialog />

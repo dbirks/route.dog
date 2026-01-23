@@ -9,17 +9,26 @@ export function MapView() {
   const markersRef = useRef<maplibregl.Marker[]>([])
 
   const addresses = useRouteStore(state => state.addresses)
+  const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
+  const setSelectedStopIndex = useRouteStore(state => state.setSelectedStopIndex)
 
   // Initialize map
   useEffect(() => {
     if (mapContainer.current && !mapRef.current) {
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
-        // Use Positron style - clean, minimal look without terrain clutter
+        // Use Bright style - colorful map
         style: 'https://tiles.openfreemap.org/styles/bright',
         center: [-86.158, 39.768], // Indianapolis
-        zoom: 10
+        zoom: 10,
+        attributionControl: false // We'll add our own collapsed one
       })
+
+      // Add collapsed attribution control
+      mapRef.current.addControl(
+        new maplibregl.AttributionControl({ compact: true }),
+        'bottom-right'
+      )
 
       // Add navigation controls
       mapRef.current.addControl(
@@ -68,16 +77,13 @@ export function MapView() {
             color: '#3b82f6' // Blue for all stops
           })
             .setLngLat([address.longitude, address.latitude])
-            .setPopup(
-              new maplibregl.Popup({ offset: 25 })
-                .setHTML(`
-                  <div style="padding: 8px; color: #1f1f1f;">
-                    <p style="font-weight: 500; font-size: 14px; margin: 0 0 4px 0;">Stop ${index + 1}</p>
-                    <p style="font-size: 12px; margin: 0; color: #4a4a4a;">${address.standardized || address.original}</p>
-                  </div>
-                `)
-            )
             .addTo(map)
+
+          // On click, select the stop (no popup)
+          marker.getElement().addEventListener('click', (e) => {
+            e.stopPropagation()
+            setSelectedStopIndex(index)
+          })
 
           markersRef.current.push(marker)
           bounds.extend([address.longitude, address.latitude])
@@ -92,7 +98,24 @@ export function MapView() {
         })
       }
     }
-  }, [addresses])
+  }, [addresses, setSelectedStopIndex])
+
+  // Center map on selected stop
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || selectedStopIndex === null) return
+
+    const address = addresses[selectedStopIndex]
+    if (address && address.longitude && address.latitude) {
+      map.flyTo({
+        center: [address.longitude, address.latitude],
+        zoom: 15,
+        duration: 500,
+        // Offset to account for bottom sheet (move center up)
+        offset: [0, -100]
+      })
+    }
+  }, [selectedStopIndex, addresses])
 
   return (
     <div

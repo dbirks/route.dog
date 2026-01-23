@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button"
-import { Edit, AlertTriangle, MapPin } from "lucide-react"
+import { AlertTriangle, MapPin, ChevronRight } from "lucide-react"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 
 interface AddressItemProps {
@@ -8,20 +7,23 @@ interface AddressItemProps {
 }
 
 export function AddressItem({ address, index }: AddressItemProps) {
-  const setEditingAddressIndex = useRouteStore(state => state.setEditingAddressIndex)
+  const setSelectedStopIndex = useRouteStore(state => state.setSelectedStopIndex)
 
   const hasValidCoordinates = address.latitude !== 0 && address.longitude !== 0
 
-  const handleEdit = () => {
-    setEditingAddressIndex(index)
+  const handleSelect = () => {
+    setSelectedStopIndex(index)
   }
 
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
-      !hasValidCoordinates
-        ? 'border-destructive/50 bg-destructive/5'
-        : 'border-border bg-card hover:border-foreground/20'
-    }`}>
+    <button
+      onClick={handleSelect}
+      className={`w-full flex items-start gap-3 p-4 rounded-lg border transition-colors text-left ${
+        !hasValidCoordinates
+          ? 'border-destructive/50 bg-destructive/5'
+          : 'border-border bg-card hover:border-foreground/20 active:bg-accent'
+      }`}
+    >
       {/* Stop number */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-sm">
         {index + 1}
@@ -37,33 +39,16 @@ export function AddressItem({ address, index }: AddressItemProps) {
           {address.standardized || address.original}
         </p>
 
-        {address.standardized && address.standardized !== address.original && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Original: {address.original}
-          </p>
-        )}
-
-        {!hasValidCoordinates ? (
+        {!hasValidCoordinates && (
           <div className="flex items-center gap-2 text-destructive mt-2 text-xs">
             <AlertTriangle className="w-3 h-3" />
-            <span>Could not geocode this address</span>
+            <span>Could not geocode</span>
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground mt-1 font-mono">
-            {address.latitude.toFixed(4)}, {address.longitude.toFixed(4)}
-          </p>
         )}
       </div>
 
-      {/* Edit button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleEdit}
-        className="flex-shrink-0"
-      >
-        <Edit className="w-4 h-4" />
-      </Button>
-    </div>
+      {/* Chevron indicator */}
+      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-2" />
+    </button>
   )
 }

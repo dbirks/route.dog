@@ -161,7 +161,7 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                     disabled={isLoadingDemo}
                   >
                     <Zap className="w-4 h-4" />
-                    {isLoadingDemo ? "Loading..." : "Try a demo"}
+                    {isLoadingDemo ? "Loading..." : "Load demo route"}
                   </Button>
 
                   <div className="flex gap-2">
