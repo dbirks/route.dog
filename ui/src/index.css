@@ -3,9 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Indie Flower - playful hand-drawn font */
-@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
-
 /* Ensure full height for map container */
 html, body, #root {
   height: 100%;

@@ -12,9 +12,6 @@ function App() {
   const [isLoadingApi, setIsLoadingApi] = useState(false)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
   const setAddresses = useRouteStore(state => state.setAddresses)
-  const addresses = useRouteStore(state => state.addresses)
-
-  const hasAddresses = addresses.length > 0
 
   // Try Demo - loads demo image through complete API flow
   const loadDemoWithAPI = async () => {
@@ -73,18 +70,6 @@ function App() {
       <div className="hidden">
         <ImageUpload />
       </div>
-
-      {/* Welcome overlay when no addresses - positioned above dynamic island */}
-      {!hasAddresses && (
-        <div className="absolute inset-0 bottom-32 z-10 flex items-center justify-center pointer-events-none">
-          <div className="text-center p-8 pointer-events-auto">
-            <h1 className="logo-sketch text-4xl mb-2">route.dog</h1>
-            <p className="text-muted-foreground">
-              Upload a photo of your delivery list
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Dynamic Island - bottom floating control */}
       <DynamicIsland

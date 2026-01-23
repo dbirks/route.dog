@@ -10,6 +10,11 @@ interface DynamicIslandProps {
   isLoadingDemo: boolean
 }
 
+// Fixed heights to avoid animation glitches with "auto"
+const COLLAPSED_HEIGHT = 56
+const EXPANDED_HEIGHT_EMPTY = 200
+const EXPANDED_HEIGHT_WITH_ADDRESSES = 140
+
 export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { theme, setTheme } = useTheme()
@@ -23,30 +28,35 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
   const toggleExpanded = () => setIsExpanded(!isExpanded)
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
+  const expandedHeight = hasAddresses ? EXPANDED_HEIGHT_WITH_ADDRESSES : EXPANDED_HEIGHT_EMPTY
+
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
       <motion.div
-        layout
-        className="bg-card/95 backdrop-blur-md border shadow-lg overflow-hidden"
-        style={{ borderRadius: 28 }}
+        className="bg-card/95 backdrop-blur-md border shadow-lg overflow-hidden rounded-[28px]"
         initial={false}
         animate={{
-          width: isExpanded ? 320 : isLoadingDemo ? 200 : hasAddresses ? 160 : 200,
-          height: isExpanded ? "auto" : 56,
+          width: isExpanded ? 300 : isLoadingDemo ? 200 : hasAddresses ? 160 : 200,
+          height: isExpanded ? expandedHeight : COLLAPSED_HEIGHT,
         }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        transition={{
+          type: "spring",
+          stiffness: 500,
+          damping: 35,
+          mass: 0.8
+        }}
       >
-        {/* Collapsed state */}
-        <AnimatePresence mode="wait">
-          {!isExpanded && (
+        <AnimatePresence mode="wait" initial={false}>
+          {!isExpanded ? (
+            // Collapsed state
             <motion.button
               key="collapsed"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.1 }}
               onClick={toggleExpanded}
-              className="w-full h-14 flex items-center justify-center gap-2 px-4 cursor-pointer hover:bg-accent/50 transition-colors"
+              className="w-full h-full flex items-center justify-center gap-2 px-4 cursor-pointer hover:bg-accent/50 transition-colors"
             >
               {isLoadingDemo ? (
                 <>
@@ -67,34 +77,19 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                 </>
               )}
             </motion.button>
-          )}
-        </AnimatePresence>
-
-        {/* Expanded state */}
-        <AnimatePresence mode="wait">
-          {isExpanded && (
+          ) : (
+            // Expanded state
             <motion.div
               key="expanded"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="p-4"
+              transition={{ duration: 0.1 }}
+              className="p-3 h-full flex flex-col"
             >
-              {/* Header with collapse button */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="logo-sketch text-xl">route.dog</h2>
-                <button
-                  onClick={toggleExpanded}
-                  className="p-2 hover:bg-accent rounded-full transition-colors"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
-
               {hasAddresses ? (
-                /* Has addresses - show stop management */
-                <div className="space-y-3">
+                // Has addresses - show stop management
+                <div className="space-y-2 flex-1">
                   <Button
                     variant="default"
                     className="w-full gap-2"
@@ -131,20 +126,22 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                         <Moon className="w-4 h-4" />
                       )}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleExpanded}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ) : (
-                /* No addresses - show upload options */
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground text-center">
-                    Upload a photo of your delivery list
-                  </p>
-
+                // No addresses - show upload options
+                <div className="space-y-2 flex-1">
                   <Button
                     variant="default"
                     className="w-full gap-2"
                     onClick={() => {
-                      // Trigger file input click
                       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
                       if (fileInput) fileInput.click()
                       setIsExpanded(false)
@@ -167,7 +164,7 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                     {isLoadingDemo ? "Loading..." : "Try a demo"}
                   </Button>
 
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -190,6 +187,13 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                       ) : (
                         <Moon className="w-4 h-4" />
                       )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleExpanded}
+                    >
+                      <ChevronDown className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
