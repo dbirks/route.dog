@@ -16,8 +16,8 @@ export function MapView() {
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
         // Use Positron style - clean, minimal look without terrain clutter
-        style: 'https://tiles.openfreemap.org/styles/positron',
-        center: [-122.4, 37.8], // San Francisco Bay Area
+        style: 'https://tiles.openfreemap.org/styles/bright',
+        center: [-86.158, 39.768], // Indianapolis
         zoom: 10
       })
 
