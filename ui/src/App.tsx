@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { MapView } from "@/components/MapView"
-import { AddressListPanel } from "@/components/AddressListPanel"
+import { StopsBottomSheet } from "@/components/StopsBottomSheet"
 import { PastRoutesDialog } from "@/components/PastRoutesDialog"
 import { EditAddressDialog } from "@/components/EditAddressDialog"
 import { ImageUpload } from "@/components/ImageUpload"
@@ -10,8 +10,9 @@ import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 
 function App() {
   const [isLoadingApi, setIsLoadingApi] = useState(false)
-  const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
   const setAddresses = useRouteStore(state => state.setAddresses)
+  const addresses = useRouteStore(state => state.addresses)
+  const hasAddresses = addresses.length > 0
 
   // Try Demo - loads demo image through complete API flow
   const loadDemoWithAPI = async () => {
@@ -45,13 +46,8 @@ function App() {
       );
 
       // Update the store with addresses
-      const addresses: Address[] = data.addresses || [];
-      setAddresses(addresses);
-
-      // Open the address list to show results
-      if (addresses.length > 0) {
-        setAddressListOpen(true);
-      }
+      const addressList: Address[] = data.addresses || [];
+      setAddresses(addressList);
 
     } catch (error) {
       console.error('Error processing demo image:', error);
@@ -71,14 +67,16 @@ function App() {
         <ImageUpload />
       </div>
 
-      {/* Dynamic Island - bottom floating control */}
-      <DynamicIsland
-        onTryDemo={loadDemoWithAPI}
-        isLoadingDemo={isLoadingApi}
-      />
+      {/* Dynamic Island - shows when no addresses */}
+      {!hasAddresses && (
+        <DynamicIsland
+          onTryDemo={loadDemoWithAPI}
+          isLoadingDemo={isLoadingApi}
+        />
+      )}
 
-      {/* Address List Panel */}
-      <AddressListPanel />
+      {/* Stops Bottom Sheet - shows when there are addresses */}
+      <StopsBottomSheet />
 
       {/* Past Routes Dialog */}
       <PastRoutesDialog />

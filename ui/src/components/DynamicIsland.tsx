@@ -12,7 +12,7 @@ interface DynamicIslandProps {
 
 // Fixed heights to avoid animation glitches with "auto"
 const COLLAPSED_HEIGHT = 56
-const EXPANDED_HEIGHT_EMPTY = 200
+const EXPANDED_HEIGHT_EMPTY = 160
 const EXPANDED_HEIGHT_WITH_ADDRESSES = 140
 
 export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) {
