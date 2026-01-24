@@ -46,7 +46,7 @@ export function StopsBottomSheet() {
       <AnimatePresence>
         {!isOpen && (
           <motion.div
-            className="fixed bottom-6 left-1/2 z-20"
+            className="fixed bottom-6 left-1/2 z-20 touch-none"
             initial={{ opacity: 0, y: 20, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: 20, x: "-50%" }}
@@ -55,14 +55,14 @@ export function StopsBottomSheet() {
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={0.3}
             onDragEnd={handleFloatingButtonSwipe}
+            onTap={() => setIsOpen(true)}
           >
-            <button
-              onClick={() => setIsOpen(true)}
-              className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors touch-none"
+            <div
+              className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors cursor-pointer"
             >
               <span className="font-medium">{addresses.length} stops</span>
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
