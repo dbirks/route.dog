@@ -1,23 +1,20 @@
-import { useState } from "react"
-import { motion, AnimatePresence, type PanInfo } from "framer-motion"
+import { useRef, useState } from "react"
+import { Sheet, type SheetRef } from "react-modal-sheet"
+import { motion, AnimatePresence } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { Button } from "@/components/ui/button"
-import { MapPin, ChevronUp, ChevronDown, History } from "lucide-react"
+import { ChevronUp, ChevronDown, History } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
-// Heights in viewport height percentage
-const SHEET_HEIGHTS = {
-  closed: 0,
-  peek: 30,    // 30vh
-  half: 50,    // 50vh
-  full: 85,    // 85vh
-}
+// Snap points as fractions: 0.3 (peek), 0.5 (half), 0.85 (full)
+const snapPoints = [0.3, 0.5, 0.85]
+const initialSnap = 1 // Start at half (0.5)
 
 export function StopsBottomSheet() {
+  const sheetRef = useRef<SheetRef>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [sheetHeight, setSheetHeight] = useState(SHEET_HEIGHTS.half)
   const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
@@ -34,33 +31,9 @@ export function StopsBottomSheet() {
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
-  const handleDragEnd = (_: never, info: PanInfo) => {
-    const velocity = info.velocity.y
-    const offset = info.offset.y
-
-    // If dragged down fast or far, close or shrink
-    if (velocity > 500 || offset > 100) {
-      if (sheetHeight <= SHEET_HEIGHTS.peek) {
-        setIsOpen(false)
-      } else if (sheetHeight <= SHEET_HEIGHTS.half) {
-        setSheetHeight(SHEET_HEIGHTS.peek)
-      } else {
-        setSheetHeight(SHEET_HEIGHTS.half)
-      }
-    }
-    // If dragged up fast or far, expand
-    else if (velocity < -500 || offset < -100) {
-      if (sheetHeight < SHEET_HEIGHTS.half) {
-        setSheetHeight(SHEET_HEIGHTS.half)
-      } else {
-        setSheetHeight(SHEET_HEIGHTS.full)
-      }
-    }
-  }
-
   return (
     <>
-      {/* Floating button when closed */}
+      {/* Floating button when sheet is closed */}
       <AnimatePresence>
         {!isOpen && (
           <motion.div
@@ -71,13 +44,9 @@ export function StopsBottomSheet() {
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           >
             <button
-              onClick={() => {
-                setSheetHeight(SHEET_HEIGHTS.half)
-                setIsOpen(true)
-              }}
+              onClick={() => setIsOpen(true)}
               className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors"
             >
-              <MapPin className="w-4 h-4 text-primary" />
               <span className="font-medium">{addresses.length} stops</span>
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -85,81 +54,77 @@ export function StopsBottomSheet() {
         )}
       </AnimatePresence>
 
-      {/* Bottom sheet when open */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-x-0 bottom-0 z-20 bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] touch-none"
-            initial={{ height: 0 }}
-            animate={{ height: `${sheetHeight}vh` }}
-            exit={{ height: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.2}
-            onDragEnd={handleDragEnd}
-          >
-            {/* Drag handle */}
-            <div className="pt-3 pb-2 px-4 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
+      {/* Bottom sheet */}
+      <Sheet
+        ref={sheetRef}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        snapPoints={snapPoints}
+        initialSnap={initialSnap}
+        detent="full"
+        style={{ zIndex: 20 }}
+      >
+        <Sheet.Container className="!bg-card/95 !backdrop-blur-md !rounded-t-[28px] !shadow-lg">
+          <div className="h-full flex flex-col">
+            {/* Header */}
+            <Sheet.Header>
+              <div className="pt-3 pb-2 px-4">
+                {/* Drag indicator */}
+                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
 
-              {/* Header row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
+                {/* Header row */}
+                <div className="flex items-center justify-between">
                   <span className="font-medium">{addresses.length} stops</span>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPastRoutesOpen(true)}
-                  >
-                    <History className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={toggleTheme}
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="w-4 h-4" />
-                    ) : (
-                      <Moon className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setPastRoutesOpen(true)}
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={toggleTheme}
+                    >
+                      {theme === "dark" ? (
+                        <Sun className="w-4 h-4" />
+                      ) : (
+                        <Moon className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Sheet.Header>
 
             {/* Scrollable content */}
-            <div
-              className="px-4 pb-6 space-y-3 overflow-y-auto"
-              style={{ height: `calc(${sheetHeight}vh - 80px)` }}
-              onPointerDownCapture={(e) => e.stopPropagation()}
-            >
-              {addresses.map((address, index) => (
-                <AddressItem
-                  key={index}
-                  address={address}
-                  index={index}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Sheet.Content disableDrag>
+              <div className="px-4 pb-6 space-y-3 overflow-y-auto flex-1">
+                {addresses.map((address, index) => (
+                  <AddressItem
+                    key={index}
+                    address={address}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </Sheet.Content>
+          </div>
+        </Sheet.Container>
+      </Sheet>
     </>
   )
 }

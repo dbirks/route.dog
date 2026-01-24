@@ -72,9 +72,9 @@ export function MapView() {
 
       addresses.forEach((address, index) => {
         if (address.longitude && address.latitude) {
-          // All markers same color - no special start/end
+          // All markers same color - red/white
           const marker = new maplibregl.Marker({
-            color: '#3b82f6' // Blue for all stops
+            color: '#dc2626' // Red for all stops
           })
             .setLngLat([address.longitude, address.latitude])
             .addTo(map)
