@@ -3,8 +3,9 @@ import { Sheet, type SheetRef } from "react-modal-sheet"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
+import { AddAddressDialog } from "@/components/AddAddressDialog"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, History } from "lucide-react"
+import { ChevronUp, ChevronDown, History, Plus } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
@@ -15,6 +16,7 @@ const initialSnap = 1 // Start at half (0.5)
 export function StopsBottomSheet() {
   const sheetRef = useRef<SheetRef>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
@@ -81,6 +83,14 @@ export function StopsBottomSheet() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
+                      onClick={() => setIsAddDialogOpen(true)}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => setPastRoutesOpen(true)}
                     >
                       <History className="w-4 h-4" />
@@ -125,6 +135,12 @@ export function StopsBottomSheet() {
           </div>
         </Sheet.Container>
       </Sheet>
+
+      {/* Add Address Dialog */}
+      <AddAddressDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+      />
     </>
   )
 }
