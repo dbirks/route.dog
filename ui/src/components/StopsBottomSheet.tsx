@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
+import { motion } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { Button } from "@/components/ui/button"
@@ -7,16 +8,18 @@ import { MapPin, ChevronUp, ChevronDown, History } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
-// Snap points: 0 = closed (but we keep it at peek), 0.5 = half, 1 = full
-const snapPoints = [80, 0.5, 1] // 80px peek, 50% half, 100% full
+// Snap points: peek (shows header), half, full
+const snapPoints = [100, 0.5, 1]
 const initialSnap = 0 // Start at peek
 
 export function StopsBottomSheet() {
   const sheetRef = useRef<SheetRef>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [currentSnap, setCurrentSnap] = useState(initialSnap)
   const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
+  const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
   const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
 
   const hasAddresses = addresses.length > 0
@@ -24,7 +27,13 @@ export function StopsBottomSheet() {
   // Don't render if no addresses
   if (!hasAddresses) return null
 
+  // Hide when a stop is selected (detail sheet is shown)
+  if (selectedStopIndex !== null) return null
+
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
+
+  const openSheet = () => setIsSheetOpen(true)
+  const closeSheet = () => setIsSheetOpen(false)
 
   const snapTo = (index: number) => {
     sheetRef.current?.snapTo(index)
@@ -32,15 +41,33 @@ export function StopsBottomSheet() {
 
   const isExpanded = currentSnap > 0
 
+  // Show floating button when sheet is closed
+  if (!isSheetOpen) {
+    return (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+        <motion.button
+          onClick={openSheet}
+          className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
+          <MapPin className="w-4 h-4 text-primary" />
+          <span className="font-medium">{addresses.length} stops</span>
+          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+        </motion.button>
+      </div>
+    )
+  }
+
   return (
     <Sheet
       ref={sheetRef}
-      isOpen={true}
-      onClose={() => snapTo(0)}
+      isOpen={isSheetOpen}
+      onClose={closeSheet}
       snapPoints={snapPoints}
       initialSnap={initialSnap}
       onSnap={setCurrentSnap}
-      // Non-modal: no backdrop blocking
       style={{ zIndex: 20 }}
     >
       <Sheet.Container
@@ -49,15 +76,15 @@ export function StopsBottomSheet() {
           boxShadow: "none",
         }}
       >
-        {/* Custom styled container to match DynamicIsland */}
-        <div className="mx-4 mb-4 bg-card/95 backdrop-blur-md border shadow-lg rounded-[28px] overflow-hidden h-full flex flex-col">
+        {/* Custom styled container - full width on mobile */}
+        <div className="bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] overflow-hidden h-full flex flex-col">
           {/* Header / drag handle area */}
           <Sheet.Header>
             <div className="pt-3 pb-2 px-4">
               {/* Drag indicator */}
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
 
-              {/* Collapsed header row */}
+              {/* Header row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
@@ -69,9 +96,7 @@ export function StopsBottomSheet() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => {
-                      setPastRoutesOpen(true)
-                    }}
+                    onClick={() => setPastRoutesOpen(true)}
                   >
                     <History className="w-4 h-4" />
                   </Button>
@@ -91,7 +116,7 @@ export function StopsBottomSheet() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => snapTo(isExpanded ? 0 : 1)}
+                    onClick={() => isExpanded ? closeSheet() : snapTo(1)}
                   >
                     {isExpanded ? (
                       <ChevronDown className="w-4 h-4" />
@@ -118,8 +143,6 @@ export function StopsBottomSheet() {
           </Sheet.Content>
         </div>
       </Sheet.Container>
-
-      {/* No backdrop - we want non-modal behavior */}
     </Sheet>
   )
 }

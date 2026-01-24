@@ -69,8 +69,8 @@ export function StopDetailSheet() {
           boxShadow: "none",
         }}
       >
-        {/* Custom styled container to match DynamicIsland */}
-        <div className="mx-4 mb-4 bg-card/95 backdrop-blur-md border shadow-lg rounded-[28px] overflow-hidden h-full flex flex-col">
+        {/* Custom styled container - full width on mobile */}
+        <div className="bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] overflow-hidden h-full flex flex-col">
           {/* Header */}
           <Sheet.Header>
             <div className="pt-3 pb-2 px-4">
