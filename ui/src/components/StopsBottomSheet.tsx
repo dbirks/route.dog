@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type PanInfo } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { Button } from "@/components/ui/button"
@@ -7,8 +7,17 @@ import { MapPin, ChevronUp, ChevronDown, History } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
+// Heights in viewport height percentage
+const SHEET_HEIGHTS = {
+  closed: 0,
+  peek: 30,    // 30vh
+  half: 50,    // 50vh
+  full: 85,    // 85vh
+}
+
 export function StopsBottomSheet() {
   const [isOpen, setIsOpen] = useState(false)
+  const [sheetHeight, setSheetHeight] = useState(SHEET_HEIGHTS.half)
   const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
@@ -25,6 +34,30 @@ export function StopsBottomSheet() {
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
+  const handleDragEnd = (_: never, info: PanInfo) => {
+    const velocity = info.velocity.y
+    const offset = info.offset.y
+
+    // If dragged down fast or far, close or shrink
+    if (velocity > 500 || offset > 100) {
+      if (sheetHeight <= SHEET_HEIGHTS.peek) {
+        setIsOpen(false)
+      } else if (sheetHeight <= SHEET_HEIGHTS.half) {
+        setSheetHeight(SHEET_HEIGHTS.peek)
+      } else {
+        setSheetHeight(SHEET_HEIGHTS.half)
+      }
+    }
+    // If dragged up fast or far, expand
+    else if (velocity < -500 || offset < -100) {
+      if (sheetHeight < SHEET_HEIGHTS.half) {
+        setSheetHeight(SHEET_HEIGHTS.half)
+      } else {
+        setSheetHeight(SHEET_HEIGHTS.full)
+      }
+    }
+  }
+
   return (
     <>
       {/* Floating button when closed */}
@@ -38,7 +71,10 @@ export function StopsBottomSheet() {
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           >
             <button
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                setSheetHeight(SHEET_HEIGHTS.half)
+                setIsOpen(true)
+              }}
               className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors"
             >
               <MapPin className="w-4 h-4 text-primary" />
@@ -53,15 +89,18 @@ export function StopsBottomSheet() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-20 bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px]"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            className="fixed inset-x-0 bottom-0 z-20 bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] touch-none"
+            initial={{ height: 0 }}
+            animate={{ height: `${sheetHeight}vh` }}
+            exit={{ height: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            style={{ maxHeight: "70vh" }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={handleDragEnd}
           >
             {/* Drag handle */}
-            <div className="pt-3 pb-2 px-4">
+            <div className="pt-3 pb-2 px-4 cursor-grab active:cursor-grabbing">
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
 
               {/* Header row */}
@@ -105,7 +144,11 @@ export function StopsBottomSheet() {
             </div>
 
             {/* Scrollable content */}
-            <div className="px-4 pb-6 space-y-3 overflow-y-auto" style={{ maxHeight: "calc(70vh - 80px)" }}>
+            <div
+              className="px-4 pb-6 space-y-3 overflow-y-auto"
+              style={{ height: `calc(${sheetHeight}vh - 80px)` }}
+              onPointerDownCapture={(e) => e.stopPropagation()}
+            >
               {addresses.map((address, index) => (
                 <AddressItem
                   key={index}
