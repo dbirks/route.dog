@@ -1,8 +1,9 @@
 import { useRef } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
+import { motion, type PanInfo } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MapPin, Navigation, Edit, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Edit, AlertTriangle, ExternalLink } from "lucide-react"
 
 // Snap points as fractions: 0.35 (peek), 0.65 (expanded)
 const snapPoints = [0.35, 0.65]
@@ -47,6 +48,17 @@ export function StopDetailSheet() {
   const goToNextStop = () => {
     if (selectedStopIndex !== null && selectedStopIndex < addresses.length - 1) {
       setSelectedStopIndex(selectedStopIndex + 1)
+    }
+  }
+
+  const handleSwipe = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const swipeThreshold = 50
+    if (info.offset.x > swipeThreshold) {
+      // Swiped right -> go to previous stop
+      goToPrevStop()
+    } else if (info.offset.x < -swipeThreshold) {
+      // Swiped left -> go to next stop
+      goToNextStop()
     }
   }
 
@@ -116,61 +128,51 @@ export function StopDetailSheet() {
           {/* Content */}
           <Sheet.Content disableDrag>
             <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-              {/* Address card */}
-              <div className={`p-4 rounded-xl border ${
-                !hasValidCoordinates
-                  ? 'border-destructive/50 bg-destructive/5'
-                  : 'border-border bg-muted/30'
-              }`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
+              {/* Address card - swipeable */}
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={handleSwipe}
+                className={`p-4 rounded-xl border cursor-grab active:cursor-grabbing ${
+                  !hasValidCoordinates
+                    ? 'border-destructive/50 bg-destructive/5'
+                    : 'border-border bg-muted/30'
+                }`}
+              >
+                <p className="font-medium text-lg">
+                  {selectedAddress.standardized || selectedAddress.original}
+                </p>
+
+                {!hasValidCoordinates && (
+                  <div className="flex items-center gap-2 text-destructive mt-3 text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Could not geocode this address</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">
-                      {selectedAddress.standardized || selectedAddress.original}
-                    </p>
+                )}
 
-                    {selectedAddress.standardized && selectedAddress.standardized !== selectedAddress.original && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Original: {selectedAddress.original}
-                      </p>
-                    )}
-
-                    {!hasValidCoordinates ? (
-                      <div className="flex items-center gap-2 text-destructive mt-2 text-sm">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span>Could not geocode this address</span>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground mt-2 font-mono">
-                        {selectedAddress.latitude.toFixed(5)}, {selectedAddress.longitude.toFixed(5)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
+                {/* Open in Maps button inside card */}
                 <Button
-                  variant="default"
-                  className="flex-1 gap-2"
+                  variant="secondary"
+                  size="sm"
+                  className="mt-4 gap-2"
                   onClick={handleNavigate}
                   disabled={!hasValidCoordinates}
                 >
-                  <Navigation className="w-4 h-4" />
-                  Navigate
+                  <ExternalLink className="w-4 h-4" />
+                  Open in Maps
                 </Button>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleEdit}
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </Button>
-              </div>
+              </motion.div>
+
+              {/* Edit button */}
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleEdit}
+              >
+                <Edit className="w-4 h-4" />
+                Edit Address
+              </Button>
             </div>
           </Sheet.Content>
         </div>
