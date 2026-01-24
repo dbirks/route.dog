@@ -4,9 +4,9 @@ import { useRouteStore } from "@/store/useRouteStore"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, MapPin, Navigation, Edit, AlertTriangle } from "lucide-react"
 
-// Snap points: peek (shows header), expanded (2/3 screen)
-const snapPoints = [200, 0.66]
-const initialSnap = 1 // Start expanded
+// Snap points as fractions: 0.35 (peek), 0.65 (expanded)
+const snapPoints = [0.35, 0.65]
+const initialSnap = 1 // Start expanded (0.65)
 
 export function StopDetailSheet() {
   const sheetRef = useRef<SheetRef>(null)
@@ -61,16 +61,12 @@ export function StopDetailSheet() {
       onClose={handleClose}
       snapPoints={snapPoints}
       initialSnap={initialSnap}
+      detent="full"
       style={{ zIndex: 30 }}
     >
-      <Sheet.Container
-        style={{
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        }}
-      >
-        {/* Custom styled container - full width on mobile */}
-        <div className="bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] overflow-hidden h-full flex flex-col">
+      <Sheet.Container className="!bg-card/95 !backdrop-blur-md !rounded-t-[28px] !shadow-lg">
+        {/* Full width content */}
+        <div className="h-full flex flex-col">
           {/* Header */}
           <Sheet.Header>
             <div className="pt-3 pb-2 px-4">

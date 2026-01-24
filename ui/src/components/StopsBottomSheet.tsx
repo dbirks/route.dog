@@ -8,9 +8,9 @@ import { MapPin, ChevronUp, ChevronDown, History } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
-// Snap points: peek (shows header), half, full
-const snapPoints = [100, 0.5, 1]
-const initialSnap = 0 // Start at peek
+// Snap points as fractions: 0.15 (peek), 0.5 (half), 0.9 (full)
+const snapPoints = [0.15, 0.5, 0.9]
+const initialSnap = 0 // Start at peek (0.15)
 
 export function StopsBottomSheet() {
   const sheetRef = useRef<SheetRef>(null)
@@ -68,16 +68,12 @@ export function StopsBottomSheet() {
       snapPoints={snapPoints}
       initialSnap={initialSnap}
       onSnap={setCurrentSnap}
+      detent="full"
       style={{ zIndex: 20 }}
     >
-      <Sheet.Container
-        style={{
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        }}
-      >
-        {/* Custom styled container - full width on mobile */}
-        <div className="bg-card/95 backdrop-blur-md border-t shadow-lg rounded-t-[28px] overflow-hidden h-full flex flex-col">
+      <Sheet.Container className="!bg-card/95 !backdrop-blur-md !rounded-t-[28px] !shadow-lg">
+        {/* Full width content */}
+        <div className="h-full flex flex-col">
           {/* Header / drag handle area */}
           <Sheet.Header>
             <div className="pt-3 pb-2 px-4">

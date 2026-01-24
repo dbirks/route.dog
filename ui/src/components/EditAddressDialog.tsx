@@ -95,11 +95,11 @@ export function EditAddressDialog() {
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <DialogFooter className="flex-row gap-2">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isLoading || !editText.trim()}>
+          <Button onClick={handleSave} disabled={isLoading || !editText.trim()} className="flex-1">
             {isLoading ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
