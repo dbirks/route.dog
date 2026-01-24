@@ -6,8 +6,6 @@ import { AddressItem } from "@/components/AddressItem"
 import { AddAddressDialog } from "@/components/AddAddressDialog"
 import { Button } from "@/components/ui/button"
 import { ChevronUp, ChevronDown, History, Plus } from "lucide-react"
-import { useTheme } from "@/components/theme-provider"
-import { Moon, Sun } from "lucide-react"
 
 // Snap points as fractions: 0.3 (peek), 0.5 (half), 0.85 (full)
 const snapPoints = [0.3, 0.5, 0.85]
@@ -17,7 +15,6 @@ export function StopsBottomSheet() {
   const sheetRef = useRef<SheetRef>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
@@ -30,8 +27,6 @@ export function StopsBottomSheet() {
 
   // Hide when a stop is selected (detail sheet is shown)
   if (selectedStopIndex !== null) return null
-
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
   // Track touch for swipe-up gesture
   const touchStartY = useRef<number | null>(null)
@@ -114,18 +109,6 @@ export function StopsBottomSheet() {
                       onClick={() => setPastRoutesOpen(true)}
                     >
                       <History className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={toggleTheme}
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="w-4 h-4" />
-                      ) : (
-                        <Moon className="w-4 h-4" />
-                      )}
                     </Button>
                     <Button
                       variant="ghost"

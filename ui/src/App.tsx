@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { MapView } from "@/components/MapView"
+import { Header } from "@/components/Header"
 import { StopsBottomSheet } from "@/components/StopsBottomSheet"
 import { StopDetailSheet } from "@/components/StopDetailSheet"
 import { PastRoutesDialog } from "@/components/PastRoutesDialog"
@@ -60,6 +61,9 @@ function App() {
 
   return (
     <div className="relative w-full h-full">
+      {/* Header bar */}
+      <Header />
+
       {/* Full-screen Map View */}
       <MapView />
 

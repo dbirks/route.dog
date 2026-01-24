@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useRouteStore } from '@/store/useRouteStore'
-import { Crosshair } from 'lucide-react'
+import { useTheme } from '@/components/theme-provider'
+import { Locate, LocateFixed } from 'lucide-react'
+
+const MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/bright',
+  dark: 'https://tiles.openfreemap.org/styles/dark'
+}
 
 export function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -14,14 +20,15 @@ export function MapView() {
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
   const setSelectedStopIndex = useRouteStore(state => state.setSelectedStopIndex)
+  const { theme } = useTheme()
 
   // Initialize map
   useEffect(() => {
     if (mapContainer.current && !mapRef.current) {
+      const currentTheme = theme === 'dark' ? 'dark' : 'light'
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
-        // Use Bright style - colorful map
-        style: 'https://tiles.openfreemap.org/styles/bright',
+        style: MAP_STYLES[currentTheme],
         center: [-86.158, 39.768], // Indianapolis
         zoom: 10,
         attributionControl: false // We'll add our own collapsed one
@@ -61,6 +68,46 @@ export function MapView() {
       }
     }
   }, [])
+
+  // Update map style when theme changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const newStyle = theme === 'dark' ? MAP_STYLES.dark : MAP_STYLES.light
+
+    // Save current center and zoom
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+
+    map.setStyle(newStyle)
+
+    // Re-add markers after style loads (setStyle removes them)
+    map.once('style.load', () => {
+      // Restore view
+      map.setCenter(center)
+      map.setZoom(zoom)
+
+      // Re-add markers
+      markersRef.current = []
+      addresses.forEach((address, index) => {
+        if (address.longitude && address.latitude) {
+          const marker = new maplibregl.Marker({
+            color: '#dc2626'
+          })
+            .setLngLat([address.longitude, address.latitude])
+            .addTo(map)
+
+          marker.getElement().addEventListener('click', (e) => {
+            e.stopPropagation()
+            setSelectedStopIndex(index)
+          })
+
+          markersRef.current.push(marker)
+        }
+      })
+    })
+  }, [theme, addresses, setSelectedStopIndex])
 
   // Update markers when addresses change
   useEffect(() => {
@@ -138,12 +185,16 @@ export function MapView() {
       {/* Custom geolocate button - bottom right, matching floating button style */}
       <button
         onClick={handleGeolocate}
-        className={`fixed bottom-6 right-4 z-10 w-12 h-12 rounded-full bg-card/95 backdrop-blur-md border shadow-lg flex items-center justify-center hover:bg-accent/50 active:bg-accent transition-colors ${
-          isLocating ? 'text-primary animate-pulse' : 'text-muted-foreground'
+        className={`fixed bottom-6 right-4 z-10 w-14 h-14 rounded-full bg-card/95 backdrop-blur-md border shadow-lg flex items-center justify-center hover:bg-accent/50 active:bg-accent transition-colors ${
+          isLocating ? 'text-blue-500' : 'text-muted-foreground'
         }`}
         aria-label="Find my location"
       >
-        <Crosshair className="w-5 h-5" />
+        {isLocating ? (
+          <LocateFixed className="w-6 h-6" />
+        ) : (
+          <Locate className="w-6 h-6" />
+        )}
       </button>
     </>
   )
