@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { AddAddressDialog } from "@/components/AddAddressDialog"
@@ -49,27 +49,24 @@ export function StopsBottomSheet() {
   return (
     <>
       {/* Floating button when sheet is closed - tap or swipe up to open */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.div
-            className="fixed bottom-6 left-1/2 z-20"
-            initial={{ opacity: 0, y: 20, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: 20, x: "-50%" }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      {!isOpen && (
+        <motion.div
+          className="fixed bottom-6 left-1/2 z-20"
+          initial={{ opacity: 0, y: 20, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
+          <button
+            onClick={() => setIsOpen(true)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 active:bg-accent transition-colors"
           >
-            <button
-              onClick={() => setIsOpen(true)}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 active:bg-accent transition-colors"
-            >
-              <span className="font-medium">{addresses.length} stops</span>
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <span className="font-medium">{addresses.length} stops</span>
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </motion.div>
+      )}
 
       {/* Bottom sheet */}
       <Sheet

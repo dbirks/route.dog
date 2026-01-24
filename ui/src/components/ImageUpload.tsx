@@ -11,37 +11,36 @@ export function ImageUpload() {
   const setAddresses = useRouteStore(state => state.setAddresses)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      handleImageUpload(file)
-    }
-  }
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
 
-  const handleImageUpload = async (file: File) => {
     setIsLoading(true)
+    const allAddresses: Address[] = []
 
     try {
-      // Convert file to base64
-      const base64 = await fileToBase64(file)
+      // Process all selected files
+      for (const file of Array.from(files)) {
+        const base64 = await fileToBase64(file)
 
-      // Call the API
-      const data = await apiRequest<{ addresses: Address[] }>(
-        API_ENDPOINTS.parseAddresses,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            image: base64
-          }),
+        const data = await apiRequest<{ addresses: Address[] }>(
+          API_ENDPOINTS.parseAddresses,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              image: base64
+            }),
+          }
+        )
+
+        if (data.addresses) {
+          allAddresses.push(...data.addresses)
         }
-      )
+      }
 
-      // Update the store with addresses
-      const addresses: Address[] = data.addresses || []
-      setAddresses(addresses)
-
-      // Open the address list to show results
-      if (addresses.length > 0) {
+      // Update the store with all addresses from all images
+      if (allAddresses.length > 0) {
+        setAddresses(allAddresses)
         setAddressListOpen(true)
       }
 
@@ -84,11 +83,12 @@ export function ImageUpload() {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* File picker input (photo library) */}
+      {/* File picker input (photo library) - supports multiple selection */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileSelect}
         className="hidden"
         id="file-upload"

@@ -12,9 +12,9 @@ export function Header() {
   return (
     <>
       {/* Header bar - fixed at top */}
-      <header className="fixed top-0 left-0 right-0 z-40 h-12 bg-red-900/90 backdrop-blur-sm flex items-center justify-between px-4 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-40 h-12 bg-rose-300/90 backdrop-blur-sm flex items-center justify-between px-4 shadow-sm">
         {/* Logo */}
-        <span className="text-white font-semibold tracking-tight">
+        <span className="text-rose-900 font-semibold tracking-tight">
           route.dog
         </span>
 
@@ -22,7 +22,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10"
+          className="h-8 w-8 text-rose-900/80 hover:text-rose-900 hover:bg-rose-900/10"
           onClick={() => setIsSettingsOpen(true)}
         >
           <Settings className="w-4 h-4" />
@@ -41,12 +41,12 @@ export function Header() {
           {/* Settings panel */}
           <div className="absolute top-0 left-0 right-0 bg-card border-b shadow-lg">
             {/* Header */}
-            <div className="h-12 bg-red-900/90 flex items-center justify-between px-4">
-              <span className="text-white font-semibold">Settings</span>
+            <div className="h-12 bg-rose-300/90 flex items-center justify-between px-4">
+              <span className="text-rose-900 font-semibold">Settings</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 text-rose-900/80 hover:text-rose-900 hover:bg-rose-900/10"
                 onClick={() => setIsSettingsOpen(false)}
               >
                 <X className="w-4 h-4" />
