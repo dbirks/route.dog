@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useRouteStore } from '@/store/useRouteStore'
+import { Crosshair } from 'lucide-react'
 
 export function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
+  const geolocateRef = useRef<maplibregl.GeolocateControl | null>(null)
+  const [isLocating, setIsLocating] = useState(false)
 
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
@@ -24,28 +27,30 @@ export function MapView() {
         attributionControl: false // We'll add our own collapsed one
       })
 
-      // Add collapsed attribution control
+      // Add collapsed attribution control (starts collapsed)
       mapRef.current.addControl(
-        new maplibregl.AttributionControl({ compact: true }),
-        'bottom-right'
+        new maplibregl.AttributionControl({ compact: true, customAttribution: '' }),
+        'bottom-left'
       )
 
-      // Add navigation controls
-      mapRef.current.addControl(
-        new maplibregl.NavigationControl({ showCompass: true }),
-        'top-right'
-      )
+      // Add hidden geolocate control (we'll trigger it via custom button)
+      const geolocate = new maplibregl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        trackUserLocation: true,
+        showUserLocation: true
+      })
+      geolocateRef.current = geolocate
 
-      // Add geolocate control to track user location
-      mapRef.current.addControl(
-        new maplibregl.GeolocateControl({
-          positionOptions: {
-            enableHighAccuracy: true
-          },
-          trackUserLocation: true
-        }),
-        'top-right'
-      )
+      // Track geolocate state
+      geolocate.on('geolocate', () => setIsLocating(false))
+      geolocate.on('error', () => setIsLocating(false))
+      geolocate.on('trackuserlocationstart', () => setIsLocating(true))
+      geolocate.on('trackuserlocationend', () => setIsLocating(false))
+
+      // Add control but hide it with CSS
+      mapRef.current.addControl(geolocate, 'top-right')
     }
 
     // Cleanup on unmount
@@ -117,11 +122,29 @@ export function MapView() {
     }
   }, [selectedStopIndex, addresses])
 
+  const handleGeolocate = () => {
+    if (geolocateRef.current) {
+      geolocateRef.current.trigger()
+    }
+  }
+
   return (
-    <div
-      ref={mapContainer}
-      className="w-full h-full"
-      id="map"
-    />
+    <>
+      <div
+        ref={mapContainer}
+        className="w-full h-full"
+        id="map"
+      />
+      {/* Custom geolocate button - bottom right, matching floating button style */}
+      <button
+        onClick={handleGeolocate}
+        className={`fixed bottom-6 right-4 z-10 w-12 h-12 rounded-full bg-card/95 backdrop-blur-md border shadow-lg flex items-center justify-center hover:bg-accent/50 active:bg-accent transition-colors ${
+          isLocating ? 'text-primary animate-pulse' : 'text-muted-foreground'
+        }`}
+        aria-label="Find my location"
+      >
+        <Crosshair className="w-5 h-5" />
+      </button>
+    </>
   )
 }

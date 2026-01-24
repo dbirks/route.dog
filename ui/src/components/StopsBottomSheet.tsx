@@ -1,6 +1,6 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useCallback } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
-import { motion, AnimatePresence, type PanInfo } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { AddAddressDialog } from "@/components/AddAddressDialog"
@@ -33,12 +33,23 @@ export function StopsBottomSheet() {
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
-  const handleFloatingButtonSwipe = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Open sheet if swiped up past threshold
-    if (info.offset.y < -30) {
+  // Track touch for swipe-up gesture
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return
+    const touchEndY = e.changedTouches[0].clientY
+    const deltaY = touchStartY.current - touchEndY
+    // If swiped up more than 30px, open the sheet
+    if (deltaY > 30) {
       setIsOpen(true)
     }
-  }
+    touchStartY.current = null
+  }, [])
 
   return (
     <>
@@ -46,23 +57,21 @@ export function StopsBottomSheet() {
       <AnimatePresence>
         {!isOpen && (
           <motion.div
-            className="fixed bottom-6 left-1/2 z-20 touch-none"
+            className="fixed bottom-6 left-1/2 z-20"
             initial={{ opacity: 0, y: 20, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: 20, x: "-50%" }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.3}
-            onDragEnd={handleFloatingButtonSwipe}
-            onTap={() => setIsOpen(true)}
           >
-            <div
-              className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 transition-colors cursor-pointer"
+            <button
+              onClick={() => setIsOpen(true)}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              className="bg-card/95 backdrop-blur-md border shadow-lg rounded-full px-5 py-3 flex items-center gap-2 hover:bg-accent/50 active:bg-accent transition-colors"
             >
               <span className="font-medium">{addresses.length} stops</span>
               <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            </div>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
