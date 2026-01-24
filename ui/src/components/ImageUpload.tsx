@@ -1,12 +1,13 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Upload, Loader2 } from "lucide-react"
+import { Camera, ImageIcon, Loader2 } from "lucide-react"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 
 export function ImageUpload() {
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const setAddresses = useRouteStore(state => state.setAddresses)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
 
@@ -49,9 +50,12 @@ export function ImageUpload() {
       alert(`Error processing image: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsLoading(false)
-      // Reset file input
+      // Reset file inputs
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = ''
       }
     }
   }
@@ -74,34 +78,59 @@ export function ImageUpload() {
     fileInputRef.current?.click()
   }
 
+  const triggerCameraCapture = () => {
+    cameraInputRef.current?.click()
+  }
+
   return (
     <div className="flex flex-col items-center gap-3">
+      {/* File picker input (photo library) */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         onChange={handleFileSelect}
         className="hidden"
+        id="file-upload"
       />
 
-      <Button
-        onClick={triggerFileSelect}
-        disabled={isLoading}
-        size="lg"
-        className="gap-2"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <Upload className="w-5 h-5" />
-            Upload Photo
-          </>
-        )}
-      </Button>
+      {/* Camera capture input */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+        id="camera-upload"
+      />
+
+      {isLoading ? (
+        <Button disabled size="lg" className="gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Processing...
+        </Button>
+      ) : (
+        <div className="flex gap-2">
+          <Button
+            onClick={triggerCameraCapture}
+            size="lg"
+            className="gap-2"
+          >
+            <Camera className="w-5 h-5" />
+            Take Photo
+          </Button>
+          <Button
+            onClick={triggerFileSelect}
+            variant="outline"
+            size="lg"
+            className="gap-2"
+          >
+            <ImageIcon className="w-5 h-5" />
+            Choose Photo
+          </Button>
+        </div>
+      )}
 
       <p className="text-sm text-muted-foreground">
         Works with photos of lists, printed sheets, or handwritten notes

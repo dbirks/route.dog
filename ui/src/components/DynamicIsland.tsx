@@ -1,9 +1,8 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, Upload, Zap, History, Moon, Sun, MapPin, Loader2 } from "lucide-react"
+import { ChevronUp, ChevronDown, Camera, ImageIcon, Zap, History, MapPin, Loader2 } from "lucide-react"
 import { useRouteStore } from "@/store/useRouteStore"
-import { useTheme } from "@/components/theme-provider"
 
 interface DynamicIslandProps {
   onTryDemo: () => void
@@ -17,7 +16,6 @@ const EXPANDED_HEIGHT_WITH_ADDRESSES = 140
 
 export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const { theme, setTheme } = useTheme()
 
   const addresses = useRouteStore(state => state.addresses)
   const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
@@ -26,7 +24,18 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
   const hasAddresses = addresses.length > 0
 
   const toggleExpanded = () => setIsExpanded(!isExpanded)
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
+
+  const triggerCamera = () => {
+    const cameraInput = document.querySelector('#camera-upload') as HTMLInputElement
+    if (cameraInput) cameraInput.click()
+    setIsExpanded(false)
+  }
+
+  const triggerFilePicker = () => {
+    const fileInput = document.querySelector('#file-upload') as HTMLInputElement
+    if (fileInput) fileInput.click()
+    setIsExpanded(false)
+  }
 
   const expandedHeight = hasAddresses ? EXPANDED_HEIGHT_WITH_ADDRESSES : EXPANDED_HEIGHT_EMPTY
 
@@ -71,8 +80,8 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 text-primary" />
-                  <span className="font-medium">Upload route</span>
+                  <Camera className="w-4 h-4 text-primary" />
+                  <span className="font-medium">Add route</span>
                   <ChevronUp className="w-4 h-4 text-muted-foreground ml-1" />
                 </>
               )}
@@ -113,18 +122,7 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                       }}
                     >
                       <History className="w-4 h-4" />
-                      History
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={toggleTheme}
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="w-4 h-4" />
-                      ) : (
-                        <Moon className="w-4 h-4" />
-                      )}
+                      Route History
                     </Button>
                     <Button
                       variant="ghost"
@@ -138,18 +136,24 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
               ) : (
                 // No addresses - show upload options
                 <div className="space-y-2 flex-1">
-                  <Button
-                    variant="default"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-                      if (fileInput) fileInput.click()
-                      setIsExpanded(false)
-                    }}
-                  >
-                    <Upload className="w-4 h-4" />
-                    Choose photo
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      className="flex-1 gap-2"
+                      onClick={triggerCamera}
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take Photo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={triggerFilePicker}
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Choose
+                    </Button>
+                  </div>
 
                   <Button
                     variant="outline"
@@ -175,18 +179,7 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                       }}
                     >
                       <History className="w-4 h-4" />
-                      History
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleTheme}
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="w-4 h-4" />
-                      ) : (
-                        <Moon className="w-4 h-4" />
-                      )}
+                      Route History
                     </Button>
                     <Button
                       variant="ghost"
