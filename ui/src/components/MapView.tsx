@@ -51,7 +51,7 @@ export function MapView() {
       geolocateRef.current = geolocate
 
       // Track geolocate state
-      geolocate.on('geolocate', () => setIsLocating(false))
+      // Note: 'geolocate' event fires when position is obtained - we stay blue while tracking
       geolocate.on('error', () => setIsLocating(false))
       geolocate.on('trackuserlocationstart', () => setIsLocating(true))
       geolocate.on('trackuserlocationend', () => setIsLocating(false))

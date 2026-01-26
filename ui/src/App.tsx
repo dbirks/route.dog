@@ -5,6 +5,7 @@ import { StopsBottomSheet } from "@/components/StopsBottomSheet"
 import { StopDetailSheet } from "@/components/StopDetailSheet"
 import { PastRoutesDialog } from "@/components/PastRoutesDialog"
 import { EditAddressDialog } from "@/components/EditAddressDialog"
+import { UploadedImagesView } from "@/components/UploadedImagesView"
 import { ImageUpload } from "@/components/ImageUpload"
 import { DynamicIsland } from "@/components/DynamicIsland"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
@@ -88,6 +89,9 @@ function App() {
 
       {/* Past Routes Dialog */}
       <PastRoutesDialog />
+
+      {/* Uploaded Images View */}
+      <UploadedImagesView />
 
       {/* Edit Address Dialog */}
       <EditAddressDialog />

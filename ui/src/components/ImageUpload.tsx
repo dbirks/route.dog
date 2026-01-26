@@ -3,12 +3,16 @@ import { Button } from "@/components/ui/button"
 import { Camera, ImageIcon, Loader2 } from "lucide-react"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 import { API_ENDPOINTS, apiRequest } from "@/lib/api"
+import { processImage, storeImage } from "@/lib/imageStore"
+
+const THUMBNAIL_SIZE = 100  // Small thumbnail for grid
+const READABLE_SIZE = 800   // Larger image for viewing
 
 export function ImageUpload() {
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
-  const setAddresses = useRouteStore(state => state.setAddresses)
+  const addAddressesFromImage = useRouteStore(state => state.addAddressesFromImage)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -16,12 +20,22 @@ export function ImageUpload() {
     if (!files || files.length === 0) return
 
     setIsLoading(true)
-    const allAddresses: Address[] = []
+    let hasAddresses = false
 
     try {
       // Process all selected files
       for (const file of Array.from(files)) {
-        const base64 = await fileToBase64(file)
+        const imageId = crypto.randomUUID()
+
+        // Create thumbnail, readable image, and base64 for API in parallel
+        const [thumbnail, readableImage, base64] = await Promise.all([
+          processImage(file, THUMBNAIL_SIZE, 0.5),  // Small grayscale WebP thumbnail
+          processImage(file, READABLE_SIZE, 0.7),   // Larger grayscale WebP for viewing
+          fileToBase64(file),                        // Full image for API
+        ])
+
+        // Store the readable image in IndexedDB
+        await storeImage(imageId, readableImage)
 
         const data = await apiRequest<{ addresses: Address[] }>(
           API_ENDPOINTS.parseAddresses,
@@ -33,14 +47,15 @@ export function ImageUpload() {
           }
         )
 
-        if (data.addresses) {
-          allAddresses.push(...data.addresses)
+        if (data.addresses && data.addresses.length > 0) {
+          // Store only the small thumbnail in Zustand/localStorage
+          addAddressesFromImage(data.addresses, imageId, thumbnail)
+          hasAddresses = true
         }
       }
 
-      // Update the store with all addresses from all images
-      if (allAddresses.length > 0) {
-        setAddresses(allAddresses)
+      // Open address list if we got any addresses
+      if (hasAddresses) {
         setAddressListOpen(true)
       }
 

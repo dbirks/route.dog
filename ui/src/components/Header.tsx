@@ -1,13 +1,24 @@
 import { useState } from "react"
-import { Settings, Moon, Sun, X } from "lucide-react"
+import { Settings, Moon, Sun, X, Trash2 } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
+import { useRouteStore } from "@/store/useRouteStore"
 
 export function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
 
+  const addresses = useRouteStore(state => state.addresses)
+  const clearCurrentRoute = useRouteStore(state => state.clearCurrentRoute)
+
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
+
+  const handleClearRoute = () => {
+    if (confirm("Clear current route? This will remove all stops.")) {
+      clearCurrentRoute()
+      setIsSettingsOpen(false)
+    }
+  }
 
   return (
     <>
@@ -77,6 +88,22 @@ export function Header() {
                   )}
                 </Button>
               </div>
+
+              {/* Clear route */}
+              {addresses.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Current Route</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleClearRoute}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Clear Route
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

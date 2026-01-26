@@ -3,9 +3,9 @@ import { Sheet, type SheetRef } from "react-modal-sheet"
 import { motion } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
-import { AddAddressDialog } from "@/components/AddAddressDialog"
+import { AddStopsSheet } from "@/components/AddStopsSheet"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, History, Plus } from "lucide-react"
+import { ChevronUp, ChevronDown, History, Plus, FileStack } from "lucide-react"
 
 // Snap points as fractions: 0.3 (peek), 0.5 (half), 0.85 (full)
 const snapPoints = [0.3, 0.5, 0.85]
@@ -13,24 +13,16 @@ const initialSnap = 1 // Start at half (0.5)
 
 export function StopsBottomSheet() {
   const sheetRef = useRef<SheetRef>(null)
+  const touchStartY = useRef<number | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isAddStopsOpen, setIsAddStopsOpen] = useState(false)
 
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
   const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
+  const setImagesViewOpen = useRouteStore(state => state.setImagesViewOpen)
 
-  const hasAddresses = addresses.length > 0
-
-  // Don't render if no addresses
-  if (!hasAddresses) return null
-
-  // Hide when a stop is selected (detail sheet is shown)
-  if (selectedStopIndex !== null) return null
-
-  // Track touch for swipe-up gesture
-  const touchStartY = useRef<number | null>(null)
-
+  // Touch handlers for swipe-up gesture (must be before early returns)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
   }, [])
@@ -45,6 +37,14 @@ export function StopsBottomSheet() {
     }
     touchStartY.current = null
   }, [])
+
+  const hasAddresses = addresses.length > 0
+
+  // Don't render if no addresses
+  if (!hasAddresses) return null
+
+  // Hide when a stop is selected (detail sheet is shown)
+  if (selectedStopIndex !== null) return null
 
   return (
     <>
@@ -95,9 +95,17 @@ export function StopsBottomSheet() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => setIsAddDialogOpen(true)}
+                      onClick={() => setIsAddStopsOpen(true)}
                     >
                       <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setImagesViewOpen(true)}
+                    >
+                      <FileStack className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -120,8 +128,8 @@ export function StopsBottomSheet() {
               </div>
             </Sheet.Header>
 
-            {/* Scrollable content */}
-            <Sheet.Content disableDrag>
+            {/* Scrollable content - drag enabled for pull-down gesture */}
+            <Sheet.Content>
               <div className="px-4 pb-6 space-y-3 overflow-y-auto flex-1">
                 {addresses.map((address, index) => (
                   <AddressItem
@@ -136,10 +144,10 @@ export function StopsBottomSheet() {
         </Sheet.Container>
       </Sheet>
 
-      {/* Add Address Dialog */}
-      <AddAddressDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+      {/* Add Stops Sheet */}
+      <AddStopsSheet
+        open={isAddStopsOpen}
+        onOpenChange={setIsAddStopsOpen}
       />
     </>
   )

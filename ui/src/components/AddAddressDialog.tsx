@@ -70,7 +70,7 @@ export function AddAddressDialog({ open, onOpenChange }: AddAddressDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent className="top-[20%] translate-y-0 sm:top-[50%] sm:-translate-y-1/2">
         <DialogHeader>
           <DialogTitle>Add Stop</DialogTitle>
         </DialogHeader>

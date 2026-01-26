@@ -151,28 +151,29 @@ export function StopDetailSheet() {
                   </div>
                 )}
 
-                {/* Open in Maps button inside card */}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mt-4 gap-2"
-                  onClick={handleNavigate}
-                  disabled={!hasValidCoordinates}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open in Maps
-                </Button>
+                {/* Action buttons inside card */}
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleNavigate}
+                    disabled={!hasValidCoordinates}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open in Maps
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleEdit}
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </Button>
+                </div>
               </motion.div>
-
-              {/* Edit button */}
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleEdit}
-              >
-                <Edit className="w-4 h-4" />
-                Edit Address
-              </Button>
             </div>
           </Sheet.Content>
         </div>

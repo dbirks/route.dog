@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, ChevronRight } from "lucide-react"
+import { AlertTriangle, ChevronRight } from "lucide-react"
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 
 interface AddressItemProps {
@@ -31,10 +31,6 @@ export function AddressItem({ address, index }: AddressItemProps) {
 
       {/* Address content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        </div>
-
         <p className="font-medium text-sm">
           {address.standardized || address.original}
         </p>
