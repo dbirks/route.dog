@@ -1,6 +1,6 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
-import { motion, type PanInfo } from "framer-motion"
+import { motion, AnimatePresence, type PanInfo } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, AlertTriangle, ExternalLink } from "lucide-react"
@@ -11,6 +11,7 @@ const initialSnap = 1 // Start expanded (0.65)
 
 export function StopDetailSheet() {
   const sheetRef = useRef<SheetRef>(null)
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
 
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
@@ -41,25 +42,47 @@ export function StopDetailSheet() {
 
   const goToPrevStop = () => {
     if (selectedStopIndex !== null && selectedStopIndex > 0) {
+      setSwipeDirection('right')
       setSelectedStopIndex(selectedStopIndex - 1)
     }
   }
 
   const goToNextStop = () => {
     if (selectedStopIndex !== null && selectedStopIndex < addresses.length - 1) {
+      setSwipeDirection('left')
       setSelectedStopIndex(selectedStopIndex + 1)
     }
   }
 
   const handleSwipe = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const swipeThreshold = 50
-    if (info.offset.x > swipeThreshold) {
-      // Swiped right -> go to previous stop
+    const velocityThreshold = 500
+
+    // Check both distance and velocity for responsive feel
+    const swipedRight = info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold
+    const swipedLeft = info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold
+
+    if (swipedRight && selectedStopIndex !== null && selectedStopIndex > 0) {
       goToPrevStop()
-    } else if (info.offset.x < -swipeThreshold) {
-      // Swiped left -> go to next stop
+    } else if (swipedLeft && selectedStopIndex !== null && selectedStopIndex < addresses.length - 1) {
       goToNextStop()
     }
+  }
+
+  // Card animation variants for carousel effect
+  const cardVariants = {
+    enter: (direction: 'left' | 'right' | null) => ({
+      x: direction === 'left' ? 300 : direction === 'right' ? -300 : 0,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (direction: 'left' | 'right' | null) => ({
+      x: direction === 'left' ? -300 : direction === 'right' ? 300 : 0,
+      opacity: 0,
+    }),
   }
 
   if (!isOpen || !selectedAddress) return null
@@ -127,53 +150,73 @@ export function StopDetailSheet() {
 
           {/* Content */}
           <Sheet.Content disableDrag>
-            <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-              {/* Address card - swipeable */}
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={handleSwipe}
-                className={`p-4 rounded-xl border cursor-grab active:cursor-grabbing ${
-                  !hasValidCoordinates
-                    ? 'border-destructive/50 bg-destructive/5'
-                    : 'border-border bg-muted/30'
-                }`}
-              >
-                <p className="font-medium text-lg">
-                  {selectedAddress.standardized || selectedAddress.original}
-                </p>
+            <div className="px-4 pb-4 overflow-hidden">
+              {/* Address card - swipeable with carousel animation */}
+              <AnimatePresence initial={false} custom={swipeDirection} mode="popLayout">
+                <motion.div
+                  key={selectedStopIndex}
+                  custom={swipeDirection}
+                  variants={cardVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{
+                    x: { type: "spring", stiffness: 300, damping: 30 },
+                    opacity: { duration: 0.2 },
+                  }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.5}
+                  onDragEnd={handleSwipe}
+                  className={`p-4 rounded-xl border cursor-grab active:cursor-grabbing ${
+                    !hasValidCoordinates
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : 'border-border bg-muted/30'
+                  }`}
+                  style={{ touchAction: 'pan-y' }}
+                >
+                  <p className="font-medium text-lg">
+                    {selectedAddress.standardized || selectedAddress.original}
+                  </p>
 
-                {!hasValidCoordinates && (
-                  <div className="flex items-center gap-2 text-destructive mt-3 text-sm">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Could not geocode this address</span>
+                  {!hasValidCoordinates && (
+                    <div className="flex items-center gap-2 text-destructive mt-3 text-sm">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Could not geocode this address</span>
+                    </div>
+                  )}
+
+                  {/* Action buttons inside card */}
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleNavigate}
+                      disabled={!hasValidCoordinates}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open in Maps
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleEdit}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </Button>
                   </div>
-                )}
+                </motion.div>
+              </AnimatePresence>
 
-                {/* Action buttons inside card */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleNavigate}
-                    disabled={!hasValidCoordinates}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Open in Maps
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleEdit}
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </Button>
-                </div>
-              </motion.div>
+              {/* Swipe hint */}
+              {addresses.length > 1 && (
+                <p className="text-center text-xs text-muted-foreground mt-3">
+                  Swipe left or right to navigate stops
+                </p>
+              )}
             </div>
           </Sheet.Content>
         </div>

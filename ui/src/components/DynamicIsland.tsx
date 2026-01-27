@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, Camera, ImageIcon, Zap, History, MapPin, Loader2 } from "lucide-react"
+import { ChevronUp, ChevronDown, Camera, ImageIcon, Zap, History, MapPin, Loader2, Plus } from "lucide-react"
 import { useRouteStore } from "@/store/useRouteStore"
 
 interface DynamicIslandProps {
@@ -12,16 +12,22 @@ interface DynamicIslandProps {
 // Fixed heights to avoid animation glitches with "auto"
 const COLLAPSED_HEIGHT = 56
 const EXPANDED_HEIGHT_EMPTY = 160
-const EXPANDED_HEIGHT_WITH_ADDRESSES = 140
+const EXPANDED_HEIGHT_WITH_HISTORY = 200 // Extra row for "Resume last route"
+const EXPANDED_HEIGHT_WITH_ADDRESSES = 180 // Extra row for "New Route"
 
 export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const addresses = useRouteStore(state => state.addresses)
+  const pastRoutes = useRouteStore(state => state.pastRoutes)
   const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
   const setAddressListOpen = useRouteStore(state => state.setAddressListOpen)
+  const clearCurrentRoute = useRouteStore(state => state.clearCurrentRoute)
+  const loadRouteFromHistory = useRouteStore(state => state.loadRouteFromHistory)
 
   const hasAddresses = addresses.length > 0
+  const hasPastRoutes = pastRoutes.length > 0
+  const lastRoute = pastRoutes[0]
 
   const toggleExpanded = () => setIsExpanded(!isExpanded)
 
@@ -37,7 +43,26 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
     setIsExpanded(false)
   }
 
-  const expandedHeight = hasAddresses ? EXPANDED_HEIGHT_WITH_ADDRESSES : EXPANDED_HEIGHT_EMPTY
+  const handleNewRoute = () => {
+    if (confirm("Start a new route? Current stops will be saved to history.")) {
+      clearCurrentRoute()
+      setIsExpanded(false)
+    }
+  }
+
+  const handleResumeLastRoute = () => {
+    if (lastRoute) {
+      loadRouteFromHistory(lastRoute.id)
+      setIsExpanded(false)
+    }
+  }
+
+  // Determine expanded height based on state
+  const expandedHeight = hasAddresses
+    ? EXPANDED_HEIGHT_WITH_ADDRESSES
+    : hasPastRoutes
+      ? EXPANDED_HEIGHT_WITH_HISTORY
+      : EXPANDED_HEIGHT_EMPTY
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
@@ -111,9 +136,18 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                     View {addresses.length} stops
                   </Button>
 
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={handleNewRoute}
+                  >
+                    <Plus className="w-4 h-4" />
+                    New Route
+                  </Button>
+
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       className="flex-1 gap-1.5"
                       onClick={() => {
@@ -136,9 +170,21 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
               ) : (
                 // No addresses - show upload options
                 <div className="space-y-2 flex-1">
-                  <div className="flex gap-2">
+                  {/* Resume last route - show prominently for returning users */}
+                  {hasPastRoutes && lastRoute && (
                     <Button
                       variant="default"
+                      className="w-full gap-2"
+                      onClick={handleResumeLastRoute}
+                    >
+                      <History className="w-4 h-4" />
+                      Resume last route ({lastRoute.addresses.length} stops)
+                    </Button>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant={hasPastRoutes ? "outline" : "default"}
                       className="flex-1 gap-2"
                       onClick={triggerCamera}
                     >
@@ -155,32 +201,34 @@ export function DynamicIsland({ onTryDemo, isLoadingDemo }: DynamicIslandProps) 
                     </Button>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      onTryDemo()
-                      setIsExpanded(false)
-                    }}
-                    disabled={isLoadingDemo}
-                  >
-                    <Zap className="w-4 h-4" />
-                    {isLoadingDemo ? "Loading..." : "Load demo route"}
-                  </Button>
-
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       className="flex-1 gap-1.5"
                       onClick={() => {
-                        setPastRoutesOpen(true)
+                        onTryDemo()
                         setIsExpanded(false)
                       }}
+                      disabled={isLoadingDemo}
                     >
-                      <History className="w-4 h-4" />
-                      Route History
+                      <Zap className="w-4 h-4" />
+                      {isLoadingDemo ? "Loading..." : "Try demo"}
                     </Button>
+                    {hasPastRoutes && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 gap-1.5"
+                        onClick={() => {
+                          setPastRoutesOpen(true)
+                          setIsExpanded(false)
+                        }}
+                      >
+                        <History className="w-4 h-4" />
+                        All routes
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

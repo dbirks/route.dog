@@ -5,7 +5,7 @@ import { useRouteStore } from "@/store/useRouteStore"
 import { AddressItem } from "@/components/AddressItem"
 import { AddStopsSheet } from "@/components/AddStopsSheet"
 import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown, History, Plus, FileStack } from "lucide-react"
+import { ChevronUp, ChevronDown, History, Plus, FileStack, RotateCcw } from "lucide-react"
 
 // Snap points as fractions: 0.3 (peek), 0.5 (half), 0.85 (full)
 const snapPoints = [0.3, 0.5, 0.85]
@@ -21,6 +21,14 @@ export function StopsBottomSheet() {
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
   const setPastRoutesOpen = useRouteStore(state => state.setPastRoutesOpen)
   const setImagesViewOpen = useRouteStore(state => state.setImagesViewOpen)
+  const clearCurrentRoute = useRouteStore(state => state.clearCurrentRoute)
+
+  const handleNewRoute = () => {
+    if (confirm("Start a new route? Current stops will be saved to history.")) {
+      clearCurrentRoute()
+      setIsOpen(false)
+    }
+  }
 
   // Touch handlers for swipe-up gesture (must be before early returns)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -96,6 +104,7 @@ export function StopsBottomSheet() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => setIsAddStopsOpen(true)}
+                      title="Add stops"
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -104,6 +113,7 @@ export function StopsBottomSheet() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => setImagesViewOpen(true)}
+                      title="View images"
                     >
                       <FileStack className="w-4 h-4" />
                     </Button>
@@ -112,8 +122,18 @@ export function StopsBottomSheet() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => setPastRoutesOpen(true)}
+                      title="Route history"
                     >
                       <History className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleNewRoute}
+                      title="New route"
+                    >
+                      <RotateCcw className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
