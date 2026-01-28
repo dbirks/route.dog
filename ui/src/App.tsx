@@ -3,7 +3,7 @@ import { MapView } from "@/components/MapView"
 import { Header } from "@/components/Header"
 import { StopsBottomSheet } from "@/components/StopsBottomSheet"
 import { StopDetailSheet } from "@/components/StopDetailSheet"
-import { PastRoutesDialog } from "@/components/PastRoutesDialog"
+import { RouteOverview } from "@/components/RouteOverview"
 import { EditAddressDialog } from "@/components/EditAddressDialog"
 import { UploadedImagesView } from "@/components/UploadedImagesView"
 import { ImageUpload } from "@/components/ImageUpload"
@@ -87,8 +87,8 @@ function App() {
       {/* Stop Detail Sheet - shows when a stop is selected */}
       <StopDetailSheet />
 
-      {/* Past Routes Dialog */}
-      <PastRoutesDialog />
+      {/* Route Overview - shows past routes with details */}
+      <RouteOverview />
 
       {/* Uploaded Images View */}
       <UploadedImagesView />

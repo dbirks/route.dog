@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback, useEffect } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
 import { motion } from "framer-motion"
 import { useRouteStore } from "@/store/useRouteStore"
@@ -29,6 +29,13 @@ export function StopsBottomSheet() {
       setIsOpen(false)
     }
   }
+
+  // When AddStopsSheet opens, minimize this sheet to lowest snap point
+  useEffect(() => {
+    if (isAddStopsOpen && sheetRef.current) {
+      sheetRef.current.snapTo(0) // Snap to index 0 (0.3 - peek)
+    }
+  }, [isAddStopsOpen])
 
   // Touch handlers for swipe-up gesture (must be before early returns)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {

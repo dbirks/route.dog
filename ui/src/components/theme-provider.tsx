@@ -4,11 +4,13 @@ type Theme = "light" | "dark" | "system"
 
 interface ThemeContextValue {
   theme: Theme
+  effectiveTheme: "light" | "dark" // The actual resolved theme (system resolved to light or dark)
   setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "system",
+  effectiveTheme: "light",
   setTheme: () => {}
 })
 
@@ -23,15 +25,42 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
     return (stored as Theme) || defaultTheme
   })
 
+  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(() => {
+    if (defaultTheme === "system") {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    }
+    return defaultTheme === "dark" ? "dark" : "light"
+  })
+
   useEffect(() => {
     const root = document.documentElement
-    root.classList.remove("light", "dark")
+    const updateTheme = (isDark: boolean) => {
+      root.classList.remove("light", "dark")
+      root.classList.add(isDark ? "dark" : "light")
+      setEffectiveTheme(isDark ? "dark" : "light")
+    }
 
     if (theme === "system") {
-      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-      root.classList.add(systemDark ? "dark" : "light")
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+
+      // Set initial theme
+      updateTheme(mediaQuery.matches)
+
+      // Listen for system preference changes
+      const handleChange = (e: MediaQueryListEvent) => {
+        updateTheme(e.matches)
+      }
+
+      mediaQuery.addEventListener("change", handleChange)
+
+      // Cleanup listener on unmount or when theme changes
+      return () => {
+        mediaQuery.removeEventListener("change", handleChange)
+      }
     } else {
+      root.classList.remove("light", "dark")
       root.classList.add(theme)
+      setEffectiveTheme(theme === "dark" ? "dark" : "light")
     }
   }, [theme])
 
@@ -41,7 +70,7 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, effectiveTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )

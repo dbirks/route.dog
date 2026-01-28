@@ -20,15 +20,14 @@ export function MapView() {
   const addresses = useRouteStore(state => state.addresses)
   const selectedStopIndex = useRouteStore(state => state.selectedStopIndex)
   const setSelectedStopIndex = useRouteStore(state => state.setSelectedStopIndex)
-  const { theme } = useTheme()
+  const { effectiveTheme } = useTheme()
 
   // Initialize map
   useEffect(() => {
     if (mapContainer.current && !mapRef.current) {
-      const currentTheme = theme === 'dark' ? 'dark' : 'light'
       mapRef.current = new maplibregl.Map({
         container: mapContainer.current,
-        style: MAP_STYLES[currentTheme],
+        style: MAP_STYLES[effectiveTheme],
         center: [-86.158, 39.768], // Indianapolis
         zoom: 10,
         attributionControl: false // We'll add our own collapsed one
@@ -74,7 +73,7 @@ export function MapView() {
     const map = mapRef.current
     if (!map) return
 
-    const newStyle = theme === 'dark' ? MAP_STYLES.dark : MAP_STYLES.light
+    const newStyle = MAP_STYLES[effectiveTheme]
 
     // Save current center and zoom
     const center = map.getCenter()
@@ -107,7 +106,7 @@ export function MapView() {
         }
       })
     })
-  }, [theme, addresses, setSelectedStopIndex])
+  }, [effectiveTheme, addresses, setSelectedStopIndex])
 
   // Update markers when addresses change
   useEffect(() => {
