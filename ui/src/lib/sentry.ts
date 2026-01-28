@@ -31,7 +31,7 @@ export function initSentry() {
     replaysOnErrorSampleRate: 1.0, // Sample 100% of sessions with errors
 
     // Filter out development errors
-    beforeSend(event, hint) {
+    beforeSend(event) {
       // Don't send events in development mode unless explicitly enabled
       if (SENTRY_ENVIRONMENT === "development" && !import.meta.env.VITE_SENTRY_DEBUG) {
         return null
@@ -45,7 +45,7 @@ export function initSentry() {
 }
 
 // Helper to manually capture errors
-export function captureError(error: Error, context?: Record<string, any>) {
+export function captureError(error: Error, context?: Record<string, unknown>) {
   Sentry.captureException(error, {
     extra: context,
   })
@@ -57,7 +57,7 @@ export function setUserContext(user: { id?: string; email?: string; username?: s
 }
 
 // Helper to add breadcrumb
-export function addBreadcrumb(message: string, category?: string, data?: Record<string, any>) {
+export function addBreadcrumb(message: string, category?: string, data?: Record<string, unknown>) {
   Sentry.addBreadcrumb({
     message,
     category,

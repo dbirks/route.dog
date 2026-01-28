@@ -66,7 +66,7 @@ export function MapView() {
         mapRef.current = null
       }
     }
-  }, [])
+  }, [effectiveTheme])
 
   // Update map style when theme changes
   useEffect(() => {

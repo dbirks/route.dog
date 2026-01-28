@@ -100,7 +100,7 @@ export function RouteOverview() {
                           <div className="flex-shrink-0">
                             {routeImages.length > 0 ? (
                               <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted grid grid-cols-2 gap-0.5">
-                                {routeImages.slice(0, 4).map((img, idx) => (
+                                {routeImages.slice(0, 4).map((img) => (
                                   <img
                                     key={img.id}
                                     src={img.thumbnail}
