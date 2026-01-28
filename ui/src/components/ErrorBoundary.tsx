@@ -99,7 +99,7 @@ export const ErrorBoundary = Sentry.withErrorBoundary(ErrorBoundaryClass, {
         {import.meta.env.DEV && (
           <div className="p-4 bg-muted rounded-lg text-left">
             <p className="text-sm font-mono text-destructive break-all">
-              {error?.message || 'Unknown error'}
+              {(error as Error)?.message || 'Unknown error'}
             </p>
           </div>
         )}
