@@ -145,6 +145,7 @@ export function AddStopsSheet({ open, onOpenChange }: AddStopsSheetProps) {
 
     setIsTypingLoading(true)
     try {
+      // Try backend geocoding first
       const data = await apiRequest<Address>(
         API_ENDPOINTS.geocodeAddress,
         {
@@ -162,15 +163,50 @@ export function AddStopsSheet({ open, onOpenChange }: AddStopsSheetProps) {
 
       handleClose()
     } catch (error) {
-      console.error('Error geocoding:', error)
-      // Add without coordinates
-      addAddress({
-        original: typedAddress.trim(),
-        standardized: typedAddress.trim(),
-        latitude: 0,
-        longitude: 0,
-      })
-      handleClose()
+      console.error('Backend geocoding failed, trying Nominatim fallback:', error)
+
+      // Fallback to Nominatim (same API as autocomplete)
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?` +
+          `format=json&addressdetails=1&limit=1&q=${encodeURIComponent(typedAddress.trim())}`,
+          {
+            headers: {
+              'User-Agent': 'RouteDog/1.0'
+            }
+          }
+        )
+        const data = await response.json()
+
+        if (data && data.length > 0) {
+          // Successfully geocoded with Nominatim
+          addAddress({
+            original: typedAddress.trim(),
+            standardized: data[0].display_name,
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon),
+          })
+        } else {
+          // No results from Nominatim either
+          addAddress({
+            original: typedAddress.trim(),
+            standardized: typedAddress.trim(),
+            latitude: 0,
+            longitude: 0,
+          })
+        }
+        handleClose()
+      } catch (nominatimError) {
+        console.error('Nominatim fallback also failed:', nominatimError)
+        // Add without coordinates as last resort
+        addAddress({
+          original: typedAddress.trim(),
+          standardized: typedAddress.trim(),
+          latitude: 0,
+          longitude: 0,
+        })
+        handleClose()
+      }
     } finally {
       setIsTypingLoading(false)
     }
