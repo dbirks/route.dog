@@ -1,7 +1,6 @@
 import { useState, useRef } from "react"
 import { Sheet, type SheetRef } from "react-modal-sheet"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Camera,
   ImageIcon,
@@ -15,6 +14,7 @@ import {
 import { useRouteStore, type Address } from "@/store/useRouteStore"
 import { API_ENDPOINTS, apiRequest } from "@/lib/api"
 import { processImage, storeImage } from "@/lib/imageStore"
+import { AddressAutocomplete } from "@/components/AddressAutocomplete"
 
 const THUMBNAIL_SIZE = 100
 const READABLE_SIZE = 800
@@ -174,6 +174,17 @@ export function AddStopsSheet({ open, onOpenChange }: AddStopsSheetProps) {
     } finally {
       setIsTypingLoading(false)
     }
+  }
+
+  const handleSelectSuggestion = (suggestion: { address: string; lat: number; lon: number }) => {
+    // When user selects from autocomplete, add it immediately
+    addAddress({
+      original: suggestion.address,
+      standardized: suggestion.address,
+      latitude: suggestion.lat,
+      longitude: suggestion.lon,
+    })
+    handleClose()
   }
 
   // Group all addresses by source image for results view
@@ -351,17 +362,19 @@ export function AddStopsSheet({ open, onOpenChange }: AddStopsSheetProps) {
                 {/* TYPING STATE */}
                 {state === "typing" && (
                   <div className="pt-4 space-y-4">
-                    <Input
-                      value={typedAddress}
-                      onChange={(e) => setTypedAddress(e.target.value)}
-                      placeholder="Enter address..."
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && typedAddress.trim()) {
-                          handleTypeAddress()
-                        }
-                      }}
-                    />
+                    <div className="space-y-2">
+                      <AddressAutocomplete
+                        value={typedAddress}
+                        onChange={setTypedAddress}
+                        onSelect={handleSelectSuggestion}
+                        onSubmit={handleTypeAddress}
+                        disabled={isTypingLoading}
+                        placeholder="Start typing an address..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Start typing to see suggestions, or enter a full address and press Add
+                      </p>
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
